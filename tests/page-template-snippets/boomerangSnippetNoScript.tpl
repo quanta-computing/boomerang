@@ -14,6 +14,8 @@
 
 	var // document.currentScript is supported in all browsers other than IE
 	    where = document.currentScript || document.getElementsByTagName("script")[0],
+	    // parent Node of this script to refer back to
+	    parentNode = where.parentNode,
 	    // Whether or not Preload method has worked
 	    promoted = false,
 	    // How long to wait for Preload to work before falling back to iframe method
@@ -52,7 +54,7 @@
 		// but some naive parsers will see a missing async attribute and think we're not async
 		script.async = true;
 
-		where.parentNode.appendChild(script);
+		parentNode.appendChild(script);
 
 		promoted = true;
 	}
@@ -83,7 +85,7 @@
 		if (!window.addEventListener && window.attachEvent && navigator.userAgent.match(/MSIE [67]\./)) {
 			window.BOOMR.snippetMethod = "s";
 
-			bootstrap(where.parentNode, "boomr-async");
+			bootstrap(parentNode, "boomr-async");
 			return;
 		}
 
@@ -108,7 +110,7 @@
 		iframeStyle.display = "none";
 
 		// Append to the end of the current block
-		where.parentNode.appendChild(iframe);
+		parentNode.appendChild(iframe);
 
 		// Try to get the iframe's document object
 		try {
@@ -191,7 +193,7 @@
 		BOOMR_lstart = new Date().getTime();
 
 		// Append our link tag
-		where.parentNode.appendChild(link);
+		parentNode.appendChild(link);
 	}
 	else {
 		// No Preload support, use iframe loader
