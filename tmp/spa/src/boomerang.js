@@ -1,0 +1,1 @@
+../../../build/boomerang-1.0.0-debug.min.js
