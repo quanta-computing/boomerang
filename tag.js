@@ -1,5 +1,5 @@
 (function() {
-  // QtaQtaBoomerang Loader Snippet version 12
+  // QtaQtaQtaQtaBoomerang Loader Snippet version 12
   if (window.QTABMR && (window.QTABMR.version || window.QTABMR.snippetExecuted)) {
     return;
   }
@@ -9,8 +9,8 @@
   window.QTABMR.snippetExecuted = true;
   window.QTABMR.snippetVersion = 12;
 
-  // NOTE: Set QtaQtaBoomerang URL here
-  QTABMR_URL = "https://appstatic.quanta.io/quanta-run-min-v2.0.0.js"
+  // NOTE: Set QtaQtaQtaQtaBoomerang URL here
+  QTABMR_URL = "https://appstatic.quanta.io/quanta-rum-v2-min.js"
   window.QTABMR_BEACON_URL= "https://rum-metrics.quanta.io/9c1633d1d083e3f7fc0c7e86a0ba1e23f3f67f6a80eafe10bd/beacon.gif"
 
   // We need to set this listener here because we need to count
@@ -55,7 +55,7 @@
 
     window.QTABMR.snippetMethod = wasFallback ? "if" : "i";
 
-    // Adds QtaQtaBoomerang within the iframe
+    // Adds QtaQtaQtaQtaBoomerang within the iframe
     bootstrap = function(parent, scriptId) {
       var script = doc.createElement("script");
       script.id = scriptId || "boomr-if-as";
