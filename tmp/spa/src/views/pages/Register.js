@@ -49,13 +49,13 @@ let Register = {
             let pass        = document.getElementById("pass_input");
             let repeatPass  = document.getElementById("repeat_pass_input");
             if (pass.value != repeatPass.value) {
-                alert (`The passwords dont match`)
+                alert (`The passwords dont match`);toto();
             } else if (email.value =='' | pass.value == '' | repeatPass == '') {
-                alert (`The fields cannot be empty`)
-            } 
+                alert (`The fields cannot be empty`);tata();
+            }
             else {
                 alert(`User with email ${email.value} was successfully submitted!`)
-            }    
+            }
         })
     }
 }

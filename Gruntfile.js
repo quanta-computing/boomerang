@@ -171,6 +171,8 @@ module.exports = function() {
 	var buildReleaseMinGz = buildPathPrefix + "." + buildSuffix + "min.js.gz";
 	var buildTest = testBuildPathPrefix + "-latest-debug.js";
 	var buildTestMin = testBuildPathPrefix + "-latest-debug.min.js";
+	var tag = "tag.js"
+	var tagMin = "tag.min.js"
 
 	//
 	// Build configuration
@@ -441,6 +443,13 @@ module.exports = function() {
 				files: [{
 					src: buildTest,
 					dest: buildTestMin
+				}]
+			},
+			"tag": {
+				options: DEFAULT_UGLIFY_BOOMERANGJS_OPTIONS,
+				files: [{
+					src: tag,
+					dest: tagMin
 				}]
 			},
 			plugins: {

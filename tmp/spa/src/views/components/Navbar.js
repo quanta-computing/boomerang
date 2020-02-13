@@ -21,10 +21,10 @@ let Navbar = {
                                 Home
                             </a>
                             <a class="navbar-item" href="/#/about">
-                                About
+                                <span onclick="toto()">About</span>
                             </a>
-                            <a class="navbar-item" href="/#/secret">
-                                Secret
+                            <a class="navbar-item" href="/#/secret" onclick="tata()">
+                                <span onclick="toto();tata()">Secret</span>
                             </a>
                         </div>
                         <div class="navbar-end">

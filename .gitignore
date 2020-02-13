@@ -1,5 +1,7 @@
 *.gz
 *.swp
+tag.min.js
+tag.min.js.map
 /boomerang-*.js
 build/*
 *.log
