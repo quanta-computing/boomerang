@@ -4,7 +4,7 @@
     return;
   }
 
-  window.
+  window.BOOMR = window.BOOMR || {};
   window.BOOMR.snippetStart = new Date().getTime();
   window.BOOMR.snippetExecuted = true;
   window.BOOMR.snippetVersion = 12;

@@ -247,6 +247,7 @@ module.exports = function() {
 			target: [
 				"Gruntfile.js",
 				"boomerang.js",
+				"tag.js",
 				"*.config*.js",
 				"plugins/*.js",
 				"tasks/*.js",
