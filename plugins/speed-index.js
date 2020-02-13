@@ -145,8 +145,6 @@
         CalculateVisualProgress();
         CalculateSpeedIndex();
       } catch(e) {}
-      console.log('SPEED INDEX');
-      console.log(SpeedIndex);
       BOOMR.addVar('nm_si', SpeedIndex);
     },
 

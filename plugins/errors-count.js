@@ -10,17 +10,15 @@
   // A private object to encapsulate all your implementation details
   // This is optional, but the way we recommend you do it.
   var impl = {
-    jserr: 0,
-
     // Add JS errors count before sending a beacon
     beforeBeacon: function() {
-      BOOMR.addVar("jserr", impl.jserr);
-      impl.jserr = 0;
+      BOOMR.addVar("jserr", BOOMR.jserr);
     },
 
     // Cleanup after ourselves
     onBeacon: function() {
       BOOMR.removeVar("jserr");
+      BOOMR.jserr = 0;
     },
   };
 
@@ -29,23 +27,16 @@
   //
   BOOMR.plugins.JsErrorsCount = {
     init: function(config) {
-      // Subscribe to any BOOMR events here.
-      // Unless your code will explicitly be called by the developer
-      // or by another plugin, you must to do this.
-      BOOMR.subscribe("before_beacon", impl.beforeBeacon, null, impl);
-      BOOMR.subscribe("beacon", impl.onBeacon, null, impl);
-      BOOMR.utils.overwriteNative(
-        BOOMR.window, "onerror",
-        function BOOMR_plugins_js_errors_count_onerror(_message, _fileName, _lineNumber, _columnNumber, _error) {
-          impl.jserr++;
-          return false; // Do not prevent default
-        });
-
+      if (!impl.initialized) {
+        BOOMR.subscribe("before_beacon", impl.beforeBeacon, null, impl);
+        BOOMR.subscribe("beacon", impl.onBeacon, null, impl);
+        impl.initialized = true;
+      }
       return this;
     },
 
     is_complete: function() {
-      return true; // Always ready
+      return true;
     }
   };
 }());
