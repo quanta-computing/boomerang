@@ -442,8 +442,8 @@
 				// we'll fire on whichever happens first
 				BOOMR.subscribe("page_ready", impl.done, null, impl);
 				BOOMR.subscribe("prerender_to_visible", impl.prerenderToVisible, null, impl);
-				BOOMR.subscribe("xhr_load", impl.xhr_done, null, impl);
-				BOOMR.subscribe("before_unload", impl.done, null, impl);
+				// BOOMR.subscribe("xhr_load", impl.xhr_done, null, impl);
+				BOOMR.subscribe("before_beacon", impl.done, null, impl);
 				BOOMR.subscribe("beacon", impl.clear, null, impl);
 
 				impl.initialized = true;
