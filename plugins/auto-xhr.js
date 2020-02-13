@@ -765,7 +765,7 @@
 			}
 
 			// send any queued beacons first
-			BOOMR.real_sendBeacon();
+			// BOOMR.real_sendBeacon();
 
 			// If the resource has an onComplete event, trigger it.
 			if (resource.onComplete) {
