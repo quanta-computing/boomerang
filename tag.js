@@ -4,7 +4,7 @@
     return;
   }
 
-  window.BOOMR = window.BOOMR || {};
+  window.QTABMR = window.QTABMR || {};
   window.BOOMR.snippetStart = new Date().getTime();
   window.BOOMR.snippetExecuted = true;
   window.BOOMR.snippetVersion = 12;
