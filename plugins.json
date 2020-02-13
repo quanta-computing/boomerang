@@ -9,7 +9,6 @@
         "plugins/navtiming.js",
         "plugins/restiming.js",
         "plugins/md5.js",
-        "plugins/compression.js",
-        "plugins/errors.js"
+        "plugins/compression.js"
     ]
 }
