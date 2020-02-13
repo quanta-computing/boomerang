@@ -1700,6 +1700,7 @@
 	 *  lookup
 	 */
 	function addToBeacon(r) {
+    return; // We're not interested in restiming info
 		BOOMR.addVar("restiming", JSON.stringify(r.restiming));
 		if (r.servertiming.length) {
 			BOOMR.addVar("servertiming", BOOMR.utils.serializeForUrl(r.servertiming));
