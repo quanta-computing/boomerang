@@ -172,8 +172,10 @@ module.exports = function() {
 	var buildTest = testBuildPathPrefix + "-latest-debug.js";
 	var buildTestMin = testBuildPathPrefix + "-latest-debug.min.js";
 
-	var tag = "tag.js"
-	var tagMin = BUILD_PATH + "/tag.min.js"
+	var tag = "tag"
+	var tagSrc = [tag + ".js"]
+	var tagBuild = BUILD_PATH + "/" + tag + ".js"
+	var tagBuildMin = BUILD_PATH + "/" + tag + ".min.js"
 
 	//
 	// Build configuration
@@ -228,6 +230,10 @@ module.exports = function() {
 			release: {
 				src: src,
 				dest: buildRelease
+			},
+			"tag": {
+				src: tagSrc,
+				dest: tagBuild
 			}
 		},
 		mkdir: {
@@ -274,8 +280,8 @@ module.exports = function() {
 						dest: buildTest
 					},
 					{
-						src: tag,
-						dest: tag
+						src: tagBuild,
+						dest: tagBuild
 					}
 				],
 				options: {
@@ -453,8 +459,8 @@ module.exports = function() {
 			"tag": {
 				options: DEFAULT_UGLIFY_BOOMERANGJS_OPTIONS,
 				files: [{
-					src: tag,
-					dest: tagMin
+					src: tagBuild,
+					dest: tagBuildMin
 				}]
 			},
 			plugins: {
