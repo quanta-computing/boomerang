@@ -171,8 +171,9 @@ module.exports = function() {
 	var buildReleaseMinGz = buildPathPrefix + "." + buildSuffix + "min.js.gz";
 	var buildTest = testBuildPathPrefix + "-latest-debug.js";
 	var buildTestMin = testBuildPathPrefix + "-latest-debug.min.js";
+
 	var tag = "tag.js"
-	var tagMin = "tag.min.js"
+	var tagMin = BUILD_PATH + "/tag.min.js"
 
 	//
 	// Build configuration
@@ -271,6 +272,10 @@ module.exports = function() {
 					{
 						src: buildTest,
 						dest: buildTest
+					},
+					{
+						src: tag,
+						dest: tag
 					}
 				],
 				options: {

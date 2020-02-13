@@ -1,23 +1,23 @@
 (function() {
-  // Boomerang Loader Snippet version 12
-  if (window.BOOMR && (window.BOOMR.version || window.BOOMR.snippetExecuted)) {
+  // QtaQtaBoomerang Loader Snippet version 12
+  if (window.QTABMR && (window.QTABMR.version || window.QTABMR.snippetExecuted)) {
     return;
   }
 
-  window.BOOMR = window.BOOMR || {};
-  window.BOOMR.snippetStart = new Date().getTime();
-  window.BOOMR.snippetExecuted = true;
-  window.BOOMR.snippetVersion = 12;
+  window.
+  window.QTABMR.snippetStart = new Date().getTime();
+  window.QTABMR.snippetExecuted = true;
+  window.QTABMR.snippetVersion = 12;
 
-  // NOTE: Set Boomerang URL here
-  window.BOOMR.url = "<QTA-RUM-SCRIPT-URL>";
-  window.BOOMR.qta_app_id = "<QTA-RUM-APP-ID>"
+  // NOTE: Set QtaQtaBoomerang URL here
+  QTABMR_URL = "https://appstatic.quanta.io/quanta-run-min-v2.0.0.js"
+  window.QTABMR_BEACON_URL= "https://rum-metrics.quanta.io/9c1633d1d083e3f7fc0c7e86a0ba1e23f3f67f6a80eafe10bd/beacon.gif"
 
   // We need to set this listener here because we need to count
   // errors even if boomerang plugin has not been loaded yet.
-  window.BOOMR.jserr = 0;
+  window.QTABMR.jserr = 0;
   window.addEventListener("error", function(){
-    window.BOOMR.jserr++;
+    window.QTABMR.jserr++;
   }, false);
 
   var // document.currentScript is supported in all browsers other than IE
@@ -35,7 +35,7 @@
 
     var script = document.createElement("script");
     script.id = "boomr-scr-as";
-    script.src = window.BOOMR.url;
+    script.src = QTABMR_URL;
 
     // Not really needed since dynamic scripts are async by default and the script is already in cache at this point,
     // but some naive parsers will see a missing async attribute and think we're not async
@@ -53,15 +53,15 @@
 
     var dom, doc = document, bootstrap, iframe, iframeStyle, win = window;
 
-    window.BOOMR.snippetMethod = wasFallback ? "if" : "i";
+    window.QTABMR.snippetMethod = wasFallback ? "if" : "i";
 
-    // Adds Boomerang within the iframe
+    // Adds QtaQtaBoomerang within the iframe
     bootstrap = function(parent, scriptId) {
       var script = doc.createElement("script");
       script.id = scriptId || "boomr-if-as";
-      script.src = window.BOOMR.url;
+      script.src = QTABMR_URL;
 
-      BOOMR_lstart = new Date().getTime();
+      QTABMR_lstart = new Date().getTime();
 
       parent = parent || doc.body;
       parent.appendChild(script);
@@ -70,7 +70,7 @@
     // For IE 6/7, we'll just load the script in the current frame, as those browsers don't support 'about:blank'
     // for an iframe src (it triggers warnings on secure sites).  This means loading on IE 6/7 may cause SPoF.
     if (!window.addEventListener && window.attachEvent && navigator.userAgent.match(/MSIE [67]\./)) {
-      window.BOOMR.snippetMethod = "s";
+      window.QTABMR.snippetMethod = "s";
 
       bootstrap(where.parentNode, "boomr-async");
       return;
@@ -156,10 +156,10 @@
     typeof link.relList.supports === "function" &&
     link.relList.supports("preload") &&
     ("as" in link)) {
-    window.BOOMR.snippetMethod = "p";
+    window.QTABMR.snippetMethod = "p";
 
     // Set attributes to trigger a Preload
-    link.href = window.BOOMR.url;
+    link.href = QTABMR_URL;
     link.rel  = "preload";
     link.as   = "script";
 
@@ -177,7 +177,7 @@
     }, LOADER_TIMEOUT);
 
     // Note the timestamp we started trying to Preload
-    BOOMR_lstart = new Date().getTime();
+    QTABMR_lstart = new Date().getTime();
 
     // Append our link tag
     where.parentNode.appendChild(link);
@@ -189,7 +189,7 @@
 
   // Save when the onload event happened, in case this is a non-NavigationTiming browser
   function boomerangSaveLoadTime(e) {
-    window.BOOMR_onload = (e && e.timeStamp) || new Date().getTime();
+    window.QTABMR_onload = (e && e.timeStamp) || new Date().getTime();
   }
 
   if (window.addEventListener) {
