@@ -291,7 +291,15 @@ module.exports = function() {
 						{
 							pattern: /beacon_urls_allowed: \[\]/,
 							replacement: "beacon_urls_allowed: [" + buildConfig.beaconUrlsAllowed + "]"
-						}
+            },
+            {
+              pattern: /BOOMR/g,
+              replacement: "QTABMR"
+            },
+            {
+              pattern: /Boomerang/g,
+              replacement: "QtaBoomerang"
+            }
 					]
 				}
 			},
