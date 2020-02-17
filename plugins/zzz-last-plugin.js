@@ -5,6 +5,7 @@ BOOMR.init({
   beacon_disable_sendbeacon: true,
   instrument_xhr: true,
   autorun: false,
+  log: null,
   AutoXHR: {
     monitorFetch: true,
   },
