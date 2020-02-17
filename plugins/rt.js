@@ -1547,8 +1547,8 @@
 
 			// we're in onload
 			if (ename === "load" || ename === "visible" ||
-			    // xhr beacon and this is not a subresource
-			    (ename === "xhr" && !subresource) ||
+			    // xhr beacon and this is not a subresource, and this is not a simple XHR beacon
+			    (ename === "xhr" && !subresource && edata.initiator != 'xhr') ||
 			    // unload fired before onload
 			    (ename === "unload" && !impl.onloadfired && impl.autorun) && !impl.crossdomain_sending) {
 				impl.incrementSessionDetails();
