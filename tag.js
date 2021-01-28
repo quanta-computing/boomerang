@@ -10,8 +10,8 @@
   window.BOOMR.snippetVersion = 12;
 
   // NOTE: Set Boomerang URL here
-  BOOMR_URL = "https://appstatic.quanta.io/quanta-rum-v2.0.0.min.js"
-  window.BOOMR_BEACON_URL= "https://rum-metrics.quanta.io/9c1633d1d083e3f7fc0c7e86a0ba1e23f3f67f6a80eafe10bd/beacon.gif"
+  BOOMR_URL = "https://appstatic.quanta.io/rum/{{ vm.site.id }}/quanta-rum-v2.0.0.min.js"
+  window.BOOMR_BEACON_URL= "https://rum-metrics.quanta.io/{{ vm.site.rum_token }}/beacon.gif"
 
   // We need to set this listener here because we need to count
   // errors even if boomerang plugin has not been loaded yet.

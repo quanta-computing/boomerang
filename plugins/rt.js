@@ -442,6 +442,15 @@
 			    // or the average page session length is longer than the session exp
 			    (avgSessionLength > sessionExp)
 			) {
+				BOOMR.cr = '<SITE_SAMPLING_RATE>';
+				BOOMR.addVar('md_cr', BOOMR.cr);
+
+				if (Math.random() > BOOMR.cr) {
+					// "SamplingRate test failed, we won't send beacons for this new session"
+					BOOMR.session.rate_limited = true
+					return
+				}
+
 				// Now we reset the session
 				BOOMR.session.start = t_start || BOOMR.t_lstart || BOOMR.t_start;
 				BOOMR.session.length = 0;
