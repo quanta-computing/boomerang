@@ -422,6 +422,9 @@
 			BOOMR.debug("Current session meta:\n" + BOOMR.utils.objectToString(BOOMR.session), "rt");
 			BOOMR.debug("Timers: t_start=" + t_start + ", sessionLoad=" + impl.loadTime + ", sessionError=" + impl.oboError + ", lastAction=" + impl.lastActionTime, "rt");
 
+			BOOMR.cr = '<SITE_SAMPLING_RATE>';
+			BOOMR.addVar('md_cr', BOOMR.cr);
+
 			// determine the average page session length, which is the session length over # of pages
 			var avgSessionLength = 0;
 			if (BOOMR.session.start && BOOMR.session.length) {
@@ -442,9 +445,6 @@
 			    // or the average page session length is longer than the session exp
 			    (avgSessionLength > sessionExp)
 			) {
-				BOOMR.cr = '<SITE_SAMPLING_RATE>';
-				BOOMR.addVar('md_cr', BOOMR.cr);
-
 				if (Math.random() > BOOMR.cr) {
 					// "SamplingRate test failed, we won't send beacons for this new session"
 					BOOMR.session.rate_limited = true
