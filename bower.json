@@ -2,7 +2,7 @@
   "name": "boomerang",
   "private": true,
   "main": "boomerang.js",
-  "version": "1.650.0",
+  "version": "1.687.0",
   "homepage": "https://github.com/akamai/boomerang/",
   "authors": [
     "Philip Tellis"
@@ -45,10 +45,11 @@
     "lodash": "~3.0.0",
     "mocha": "~3.4.2",
     "promise-polyfill": "^7.1.2",
-    "resourcetiming-compression": "^1.1.0",
+    "resourcetiming-compression": "^1.2.3",
     "usertiming": "~0.1.8",
     "usertiming-compression": "^0.1.8",
-    "zone": "^0.8.26"
+    "zone": "^0.8.26",
+    "cookieconsent": "~3.1.1"
   },
   "resolutions": {
     "angular": "1.4.6"

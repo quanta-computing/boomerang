@@ -14,8 +14,9 @@ App.ApplicationRoute = Ember.Route.extend({
 		Ember.run.scheduleOnce("afterRender", function() {
 			if (typeof window.ember_nav_routes !== "undefined" && BOOMR.utils.isArray(window.ember_nav_routes)) {
 				BOOMR.subscribe("onbeacon", function(beacon) {
-					// only continue for SPA beacons
-					if (!BOOMR.utils.inArray(beacon["http.initiator"], BOOMR.constants.BEACON_TYPE_SPAS)) {
+					// only continue for non-early SPA beacons
+					if (!BOOMR.utils.inArray(beacon["http.initiator"], BOOMR.constants.BEACON_TYPE_SPAS) ||
+					    typeof beacon.early !== "undefined") {
 						return;
 					}
 
@@ -28,6 +29,14 @@ App.ApplicationRoute = Ember.Route.extend({
 				});
 			}
 		});
+	},
+	actions: {
+		willTransition: function(transition) {
+			// Ember 1.x issues History API calls after the transition is complete (after XHRs and mutations).
+			// To work around this, we set auto:false and manually issue route changes
+			// for spa soft routes
+			BOOMR.plugins.SPA.route_change();
+		}
 	}
 });
 

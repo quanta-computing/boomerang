@@ -98,6 +98,8 @@
 	var doNotTestErrorsParam = false;
 	var doNotTestSpaAbort = false;
 
+	var actions = [];
+
 	// test framework
 	var assert;
 
@@ -144,7 +146,39 @@
 
 	t.CONFIG_DEFAULTS = {
 		beacon_url: t.BEACON_URL,
+		site_domain: null,
 		ResourceTiming: {
+			enabled: false,
+			splitAtPath: true
+		},
+		Angular: {
+			enabled: false
+		},
+		Ember: {
+			enabled: false
+		},
+		Backbone: {
+			enabled: false
+		},
+		History: {
+			enabled: false
+		},
+		Errors: {
+			enabled: false
+		},
+		TPAnalytics: {
+			enabled: false
+		},
+		UserTiming: {
+			enabled: false
+		},
+		Continuity: {
+			enabled: false
+		},
+		IFrameDelay: {
+			enabled: false
+		},
+		Early: {
 			enabled: false
 		},
 		doNotTestErrorsParam: false,
@@ -251,6 +285,7 @@
 			});
 
 			BOOMR.init(config);
+			BOOMR.fireEvent("config", config);  // this might unblock a waiting beacon
 		}
 
 		if (config.onBoomerangLoaded) {
@@ -307,6 +342,10 @@
 		return (window.performance &&
 		    typeof window.performance.getEntriesByType === "function" &&
 		    typeof window.PerformanceResourceTiming !== "undefined");
+	};
+
+	t.isServiceWorkerSupported = function() {
+		return (window.navigator && "serviceWorker" in window.navigator);
 	};
 
 	t.isServerTimingSupported = function() {
@@ -372,6 +411,12 @@
 		return window.performance &&
 		    typeof window.PerformancePaintTiming !== "undefined" &&
 		    typeof window.performance.getEntriesByType === "function";
+	};
+
+	t.isLargestContentfulPaintSupported = function() {
+		return window.performance &&
+		    typeof window.LargestContentfulPaint === "function" &&
+		    typeof window.PerformanceObserver === "function";
 	};
 
 	t.isLongTasksSupported = function() {
@@ -488,13 +533,26 @@
 		return (" " + document.cookie + ";").indexOf(" " + testCookieName + "=") !== -1;
 	};
 
-	t.clearCookies = function(domain) {
-		var date = new Date();
+	/**
+	 * @param {String} [domain]
+	 * @param {String} [samesite] - Ignored when not HTTPS for now
+	 */
+	t.clearCookies = function(domain, samesite) {
+		var date = new Date(), cookie;
 		date.setTime(date.getTime() - (24 * 60 * 60 * 1000));
 		var cookies = document.cookie.split(";");
 		for (var i = 0; i < cookies.length; i++) {
 			var name = cookies[i].split("=")[0].replace(/^\s+|\s+$/g, "");  // trim spaces
-			document.cookie = [name + "=", "expires=" + date.toGMTString(), "path=/", "domain=" + (domain || location.hostname)].join("; ");
+			cookie = [name + "=", "expires=" + date.toGMTString(), "path=/", "domain=" + (domain || location.hostname)];
+			if (location.protocol === "https:") {
+				// this doesn't check that the browser is compatible
+				cookie.push("secure");
+
+				if (samesite) {
+					cookie.push("samesite=" + samesite);
+				}
+			}
+			document.cookie = cookie.join(";");
 		}
 	};
 
@@ -524,15 +582,27 @@
 
 	t.clearLocalStorage = function() {
 		// Clear localStorage
-		if (typeof window.localStorage === "object" && typeof window.localStorage.clear === "function") {
-			window.localStorage.clear();
+		try {
+			if (typeof window.localStorage === "object" && typeof window.localStorage.clear === "function") {
+				window.localStorage.clear();
+			}
+		}
+		catch (e) {
+			// can fail in incognito mode
+			console.error("Clearing local storage failed", e);
 		}
 	};
 
 	t.clearSessionStorage = function() {
 		// Clear sessionStorage
-		if (typeof window.sessionStorage === "object" && typeof window.sessionStorage.clear === "function") {
-			window.sessionStorage.clear();
+		try {
+			if (typeof window.sessionStorage === "object" && typeof window.sessionStorage.clear === "function") {
+				window.sessionStorage.clear();
+			}
+		}
+		catch (e) {
+			// can fail in incognito mode
+			console.error("Clearing session storage failed", e);
 		}
 	};
 
@@ -917,7 +987,16 @@
 			BOOMR.plugins.PaintTiming.is_supported() &&
 			p &&
 			p.timeOrigin) {
-			fp = BOOMR.plugins.PaintTiming.getTimingFor("first-contentful-paint");
+			// LCP - get the largest one that happened by the beacon
+			var lb = BOOMR.plugins.TestFramework.lastBeacon();
+			if (lb["pt.lcp"]) {
+				fp = lb["pt.lcp"];
+			}
+
+			if (!fp) {
+				// or FCP
+				fp = BOOMR.plugins.PaintTiming.getTimingFor("first-contentful-paint");
+			}
 			if (!fp) {
 				// or get First Paint directly from PaintTiming
 				fp = BOOMR.plugins.PaintTiming.getTimingFor("first-paint");
@@ -997,6 +1076,16 @@
 	t.isChrome = function() {
 		return window.navigator &&
 			(window.navigator.userAgent.indexOf("Chrome") !== -1);
+	};
+
+	/**
+	 * Determines the user agent is Safari or not
+	 *
+	 * @returns {boolean} True if the user agent is Safari
+	 */
+	t.isSafari = function() {
+		return window.navigator && window.navigator.vendor &&
+			(window.navigator.vendor.indexOf("Apple") !== -1);
 	};
 
 	/**
@@ -1220,6 +1309,306 @@
 		};
 	};
 
+	/*
+	 * Finds Marks from Boomerang with the specified name
+	 *
+	 * @param {string} name Mark name
+	 */
+	t.findBoomerangMarks = function(name) {
+		if (!t.isUserTimingSupported()) {
+			return [];
+		}
+
+		return BOOMR.utils.arrayFilter(performance.getEntriesByType("mark"), function(m) {
+			return m.name === "boomr:" + name;
+		});
+	};
+
+	/**
+	 * Finds Marks from Boomerang between the specified time frame
+	 *
+	 * @param {string} name Mark name
+	 * @param {number} start Start time
+	 * @param {number} end End tiem
+	 */
+	t.findBoomerangMarksBetween = function(name, start, end) {
+		if (!t.isUserTimingSupported()) {
+			return [];
+		}
+
+		// cast a marks to times if needed
+		start = (start && start.startTime) || start;
+		end = (end && end.startTime) || end;
+
+		return BOOMR.utils.arrayFilter(performance.getEntriesByType("mark"), function(m) {
+			return m.name === "boomr:" + name &&
+				m.startTime >= start &&
+				m.startTime <= end;
+		});
+	};
+
+	/**
+	 * Gets the current site domain (from location.hostname)
+	 *
+	 * @returns {string} Site siteDomain
+	 */
+	t.siteDomain = function() {
+		return window.location.hostname.replace(/.*?([^.]+\.[^.]+)\.?$/, "$1").toLowerCase();
+	};
+
+	/**
+	 * Sets the list of actions (callback functions). Actions are triggered by `queueAction()`
+	 *
+	 * @param {function[]} _actions - List of callback action functions
+	 */
+	t.setActions = function(_actions) {
+		actions = _actions;
+	};
+
+	/**
+	 * Queues the next action in the list.
+	 * If `node` is given then wait for the node's onload else call the action immediately
+	 *
+	 * @param {HTMLElement} [node]
+	 */
+	t.queueAction = function(node) {
+		var action = actions.shift();
+		if (!action) {
+			return;
+		}
+
+		if (node) {
+			// if we have a node, wait for it's onload event
+			var listener = function() {
+				node.removeEventListener("load", listener);
+				action();
+			};
+			node.addEventListener("load", listener);
+		}
+		else {
+			action();
+		}
+	};
+
+	/**
+	 * Helper function to fetch resources to test AutoXHR/SPA functionality.
+	 * Request waterfall:
+	 *     xxxxx (tracked xhr)
+	 *          x (sub-img1)
+	 *     xxxxxxxxxx (un-tracked xhr)
+	 *               x (sub-img2)
+	 *     x (main-img)
+	 *
+	 * @param {boolean} useFetch - Use Fetch API else use XHR
+	 */
+	t.resources = (function() {
+		var imgs = ["resources-main-img", "resources-sub-img1", "resources-sub-img"],
+		    resourcesCallCount = 0;
+
+		function getURI(id, delay) {
+			return "/delay?id=" + id + "-" + resourcesCallCount + "&delay=" + delay + "&file=/assets/img.jpg&rnd=" + Math.random();
+		}
+
+		return function(useFetch) {
+			if (resourcesCallCount === 0) {
+				// setup imgs used for MO events
+				for (var i = 0; i < imgs.length; i++) {
+					var img = document.getElementById(imgs[i]);
+					if (!img) {
+						img = new Image();
+						img.id = imgs[i];
+						img.src = "";
+						img.style = "width:100px;height:100px;";
+						document.body.appendChild(img);
+					}
+				}
+			}
+			resourcesCallCount++;
+
+			if (useFetch) {
+				// at least 1s longer than main-image so that if fetch instrumentation is off or bugs out then the MO is later than the spa timeout
+				var f = fetch(getURI("fetch-track", 1500));
+				f.then(function(response) {
+					response.text();
+					var img1 = document.getElementById(imgs[1]);
+					img1.src = "";
+					img1.src = getURI(imgs[1], 200);
+				});
+
+				// slow fetch request that isn't tracked (ignore rule)
+				var f2 = fetch(getURI("fetch-ignore", 3000));
+				f2.then(function(response) {
+					response.text();
+					var img2 = document.getElementById(imgs[2]);
+					img2.src = "";
+					img2.src = getURI(imgs[2], 200);
+
+					// img2 will be the last resource loaded. Queue the next action
+					t.queueAction(img2);
+				});
+			}
+			else {
+				var xhr = new XMLHttpRequest();
+				// at least 1s longer than main-image so that if xhr instrumentation is off or bugs out then the MO is later than the spa timeout
+				xhr.open("GET", getURI("xhr-track", 1500));
+				xhr.send(null);
+				xhr.onreadystatechange = function() {
+					if (xhr.readyState === 4 && xhr.status === 200) {
+						var img1 = document.getElementById(imgs[1]);
+						img1.src = "";
+						img1.src = getURI(imgs[1], 200);
+					}
+				};
+
+				// slow xhr request that isn't tracked (ignore rule)
+				var xhr2 = new XMLHttpRequest();
+				xhr2.open("GET", getURI("xhr-ignore", 3000));
+				xhr2.send(null);
+				xhr2.onreadystatechange = function() {
+					if (xhr2.readyState === 4 && xhr2.status === 200) {
+						var img2 = document.getElementById(imgs[2]);
+						img2.src = "";
+						img2.src = getURI(imgs[2], 200);
+
+						// img2 will be the last resource loaded. Queue the next action
+						t.queueAction(img2);
+					}
+				};
+			}
+
+			var img = document.getElementById(imgs[0]);
+			img.src = "";  // visual feedback when running tests manually
+			img.src = getURI(imgs[0], 200);
+		};
+	})();
+
+	//
+	// Dynamic content addition functions
+	//
+
+	// Array of XHR timestamps
+	t.xhrTimes = [];
+
+	/**
+	 * Creates a new XHR that will take around the time specified
+	 *
+	 * @param {string} id XHR ID (will be included in the URL)
+	 * @param {number} delay Delay (milliseconds)
+	 * @param {function} onComplete Callback
+	 */
+	t.xhrDelayed = function(id, delay, onComplete) {
+		var xhr = new XMLHttpRequest();
+
+		xhr.open("GET", "/delay?id=" + id + "&delay=" + delay + "&file=/assets/img.jpg&rnd=" + t.rnd36(), true);
+
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState === 4) {
+				// update timings
+				xhr.timing.end = BOOMR.now();
+				xhr.timing.duration = xhr.timing.end - xhr.timing.start;
+
+				return onComplete && onComplete(xhr);
+			}
+		};
+
+		// save timestamp
+		xhr.timing = {
+			start: BOOMR.now()
+		};
+
+		// add as both index and id
+		t.xhrTimes.push(xhr.timing);
+		t.xhrTimes[id] = xhr.timing;
+
+		xhr.send(null);
+	};
+
+	// Array of Image timestamps
+	t.imgTimes = [];
+
+	/**
+	 * Creates a new IMG that will be added to the DOM and will take around the time specified
+	 *
+	 * @param {string} id IMG ID (will be included in the URL)
+	 * @param {number} delay Delay (milliseconds)
+	 */
+	t.imgIntoDomDelayed = function(id, delay) {
+		var img = document.createElement("IMG");
+		img.src = "/delay?id=" + id + "&delay=" + delay + "&file=/assets/img.jpg?rnd=" + t.rnd36();
+		img.onload = function() {
+			// update timings
+			img.timing.end = BOOMR.now();
+			img.timing.duration = img.timing.end - img.timing.start;
+		};
+
+		img.timing = {
+			start: BOOMR.now()
+		};
+
+		// add as both index and id
+		t.imgTimes.push(img.timing);
+		t.imgTimes[id] = img.timing;
+
+		document.body.appendChild(img);
+	};
+
+	// Array of mouse event timestamps
+	t.mouseEventTimes = [];
+
+	/**
+	 * Fires a new mouse event on the page
+	 *
+	 * @param {string} etype Event type
+	 */
+	t.fireMouseEvent = function(etype) {
+		var clickable = document.getElementById("clickable");
+		if (!clickable) {
+			clickable = document.createElement("DIV");
+			document.body.appendChild(clickable);
+		}
+
+		// save timestamp
+		t.mouseEventTimes.push(BOOMR.now());
+
+		if (clickable.fireEvent) {
+			clickable.fireEvent("on" + etype);
+		}
+		else {
+			var evObj = document.createEvent("MouseEvent");
+			evObj.initEvent(etype, true, false);
+			clickable.dispatchEvent(evObj);
+		}
+
+		window.eventFired = true;
+	};
+
+	// Array of route change times
+	t.routeChangeTimes = [];
+
+	/**
+	 * Triggers a new route change via the History API to a random URL
+	 *
+	 * @param {string} name Route name (will have a random string appended)
+	 */
+	t.routeChangeRnd = function(name) {
+		if (window.history &&
+		    typeof history.pushState === "function") {
+			// save timestamp
+			t.routeChangeTimes.push(BOOMR.now());
+
+			history.pushState({}, "", "#" + name + "-" + t.rnd36());
+		}
+	};
+
+	/**
+	 * Gets a random number Base36 (1 trillion possibilities)
+	 *
+	 * @returns {string} Random number (Base36)
+	 */
+	t.rnd36 = function() {
+		return Math.round(Math.random() * 999999999999).toString(36);
+	};
+
 	window.BOOMR_test = t;
 
 	// force LOGN plugin not to run. Individual tests will override this if needed.
@@ -1258,283 +1647,26 @@
 }(window));
 
 /**
- * Adds support for [MD5](https://en.wikipedia.org/wiki/MD5) to Boomerang Test Framework.
- *
- * ## License
- *
- * JavaScript MD5 1.0.1
- * https://github.com/blueimp/JavaScript-MD5
- *
- * Copyright 2011, Sebastian Tschan
- * https://blueimp.net
- *
- * Licensed under the MIT license:
- * http://www.opensource.org/licenses/MIT
- *
- * Based on
- * A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
- * Digest Algorithm, as defined in RFC 1321.
- * Version 2.2 Copyright (C) Paul Johnston 1999 - 2009
- * Other contributors: Greg Holt, Andrew Kepert, Ydnar, Lostinet
- * Distributed under the BSD License
- * See http://pajhome.org.uk/crypt/md5 for more info.
+ * Adds support for FNV hashing algorithm (slightly modified) to Boomerang Test Framework.
  */
-window.BOOMR_test.MD5 = (function() {
+window.BOOMR_test.hashString = (function() {
 	/*jslint bitwise: true */
 	/*global unescape*/
 
 	"use strict";
-	/*
-	* Add integers, wrapping at 2^32. This uses 16-bit operations internally
-	* to work around bugs in some JS interpreters.
-	*/
-	function safe_add(x, y) {
-		var lsw = (x & 0xFFFF) + (y & 0xFFFF),
-		    msw = (x >> 16) + (y >> 16) + (lsw >> 16);
-		return (msw << 16) | (lsw & 0xFFFF);
-	}
+	function fnv(string) {
+		string = encodeURIComponent(string);
+		var hval = 0x811c9dc5;
 
-	/*
-	* Bitwise rotate a 32-bit number to the left.
-	*/
-	function bit_rol(num, cnt) {
-		return (num << cnt) | (num >>> (32 - cnt));
-	}
-
-	/*
-	* These functions implement the four basic operations the algorithm uses.
-	*/
-	function md5_cmn(q, a, b, x, s, t) {
-		return safe_add(bit_rol(safe_add(safe_add(a, q), safe_add(x, t)), s), b);
-	}
-	function md5_ff(a, b, c, d, x, s, t) {
-		return md5_cmn((b & c) | ((~b) & d), a, b, x, s, t);
-	}
-	function md5_gg(a, b, c, d, x, s, t) {
-		return md5_cmn((b & d) | (c & (~d)), a, b, x, s, t);
-	}
-	function md5_hh(a, b, c, d, x, s, t) {
-		return md5_cmn(b ^ c ^ d, a, b, x, s, t);
-	}
-	function md5_ii(a, b, c, d, x, s, t) {
-		return md5_cmn(c ^ (b | (~d)), a, b, x, s, t);
-	}
-
-	/*
-	* Calculate the MD5 of an array of little-endian words, and a bit length.
-	*/
-	function binl_md5(x, len) {
-		/* append padding */
-		x[len >> 5] |= 0x80 << (len % 32);
-		x[(((len + 64) >>> 9) << 4) + 14] = len;
-
-		var i, olda, oldb, oldc, oldd,
-		    a =  1732584193,
-		    b = -271733879,
-		    c = -1732584194,
-		    d =  271733878;
-
-		for (i = 0; i < x.length; i += 16) {
-			olda = a;
-			oldb = b;
-			oldc = c;
-			oldd = d;
-
-			a = md5_ff(a, b, c, d, x[i],       7, -680876936);
-			d = md5_ff(d, a, b, c, x[i +  1], 12, -389564586);
-			c = md5_ff(c, d, a, b, x[i +  2], 17,  606105819);
-			b = md5_ff(b, c, d, a, x[i +  3], 22, -1044525330);
-			a = md5_ff(a, b, c, d, x[i +  4],  7, -176418897);
-			d = md5_ff(d, a, b, c, x[i +  5], 12,  1200080426);
-			c = md5_ff(c, d, a, b, x[i +  6], 17, -1473231341);
-			b = md5_ff(b, c, d, a, x[i +  7], 22, -45705983);
-			a = md5_ff(a, b, c, d, x[i +  8],  7,  1770035416);
-			d = md5_ff(d, a, b, c, x[i +  9], 12, -1958414417);
-			c = md5_ff(c, d, a, b, x[i + 10], 17, -42063);
-			b = md5_ff(b, c, d, a, x[i + 11], 22, -1990404162);
-			a = md5_ff(a, b, c, d, x[i + 12],  7,  1804603682);
-			d = md5_ff(d, a, b, c, x[i + 13], 12, -40341101);
-			c = md5_ff(c, d, a, b, x[i + 14], 17, -1502002290);
-			b = md5_ff(b, c, d, a, x[i + 15], 22,  1236535329);
-
-			a = md5_gg(a, b, c, d, x[i +  1],  5, -165796510);
-			d = md5_gg(d, a, b, c, x[i +  6],  9, -1069501632);
-			c = md5_gg(c, d, a, b, x[i + 11], 14,  643717713);
-			b = md5_gg(b, c, d, a, x[i],      20, -373897302);
-			a = md5_gg(a, b, c, d, x[i +  5],  5, -701558691);
-			d = md5_gg(d, a, b, c, x[i + 10],  9,  38016083);
-			c = md5_gg(c, d, a, b, x[i + 15], 14, -660478335);
-			b = md5_gg(b, c, d, a, x[i +  4], 20, -405537848);
-			a = md5_gg(a, b, c, d, x[i +  9],  5,  568446438);
-			d = md5_gg(d, a, b, c, x[i + 14],  9, -1019803690);
-			c = md5_gg(c, d, a, b, x[i +  3], 14, -187363961);
-			b = md5_gg(b, c, d, a, x[i +  8], 20,  1163531501);
-			a = md5_gg(a, b, c, d, x[i + 13],  5, -1444681467);
-			d = md5_gg(d, a, b, c, x[i +  2],  9, -51403784);
-			c = md5_gg(c, d, a, b, x[i +  7], 14,  1735328473);
-			b = md5_gg(b, c, d, a, x[i + 12], 20, -1926607734);
-
-			a = md5_hh(a, b, c, d, x[i +  5],  4, -378558);
-			d = md5_hh(d, a, b, c, x[i +  8], 11, -2022574463);
-			c = md5_hh(c, d, a, b, x[i + 11], 16,  1839030562);
-			b = md5_hh(b, c, d, a, x[i + 14], 23, -35309556);
-			a = md5_hh(a, b, c, d, x[i +  1],  4, -1530992060);
-			d = md5_hh(d, a, b, c, x[i +  4], 11,  1272893353);
-			c = md5_hh(c, d, a, b, x[i +  7], 16, -155497632);
-			b = md5_hh(b, c, d, a, x[i + 10], 23, -1094730640);
-			a = md5_hh(a, b, c, d, x[i + 13],  4,  681279174);
-			d = md5_hh(d, a, b, c, x[i],      11, -358537222);
-			c = md5_hh(c, d, a, b, x[i +  3], 16, -722521979);
-			b = md5_hh(b, c, d, a, x[i +  6], 23,  76029189);
-			a = md5_hh(a, b, c, d, x[i +  9],  4, -640364487);
-			d = md5_hh(d, a, b, c, x[i + 12], 11, -421815835);
-			c = md5_hh(c, d, a, b, x[i + 15], 16,  530742520);
-			b = md5_hh(b, c, d, a, x[i +  2], 23, -995338651);
-
-			a = md5_ii(a, b, c, d, x[i],       6, -198630844);
-			d = md5_ii(d, a, b, c, x[i +  7], 10,  1126891415);
-			c = md5_ii(c, d, a, b, x[i + 14], 15, -1416354905);
-			b = md5_ii(b, c, d, a, x[i +  5], 21, -57434055);
-			a = md5_ii(a, b, c, d, x[i + 12],  6,  1700485571);
-			d = md5_ii(d, a, b, c, x[i +  3], 10, -1894986606);
-			c = md5_ii(c, d, a, b, x[i + 10], 15, -1051523);
-			b = md5_ii(b, c, d, a, x[i +  1], 21, -2054922799);
-			a = md5_ii(a, b, c, d, x[i +  8],  6,  1873313359);
-			d = md5_ii(d, a, b, c, x[i + 15], 10, -30611744);
-			c = md5_ii(c, d, a, b, x[i +  6], 15, -1560198380);
-			b = md5_ii(b, c, d, a, x[i + 13], 21,  1309151649);
-			a = md5_ii(a, b, c, d, x[i +  4],  6, -145523070);
-			d = md5_ii(d, a, b, c, x[i + 11], 10, -1120210379);
-			c = md5_ii(c, d, a, b, x[i +  2], 15,  718787259);
-			b = md5_ii(b, c, d, a, x[i +  9], 21, -343485551);
-
-			a = safe_add(a, olda);
-			b = safe_add(b, oldb);
-			c = safe_add(c, oldc);
-			d = safe_add(d, oldd);
+		for (var i = 0; i < string.length; i++) {
+			hval = hval ^ (string.charCodeAt(i) & 0xFF);
+			hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
 		}
-		return [a, b, c, d];
+
+		var hash = (hval >>> 0).toString() + string.length;
+
+		return parseInt(hash).toString(36);
 	}
 
-	/*
-	* Convert an array of little-endian words to a string
-	*/
-	function binl2rstr(input) {
-		var i,
-		    output = "";
-		for (i = 0; i < input.length * 32; i += 8) {
-			output += String.fromCharCode((input[i >> 5] >>> (i % 32)) & 0xFF);
-		}
-		return output;
-	}
-
-	/*
-	* Convert a raw string to an array of little-endian words
-	* Characters >255 have their high-byte silently ignored.
-	*/
-	function rstr2binl(input) {
-		var i,
-		    output = [];
-		output[(input.length >> 2) - 1] = undefined;
-		for (i = 0; i < output.length; i += 1) {
-			output[i] = 0;
-		}
-		for (i = 0; i < input.length * 8; i += 8) {
-			output[i >> 5] |= (input.charCodeAt(i / 8) & 0xFF) << (i % 32);
-		}
-		return output;
-	}
-
-	/*
-	* Calculate the MD5 of a raw string
-	*/
-	function rstr_md5(s) {
-		return binl2rstr(binl_md5(rstr2binl(s), s.length * 8));
-	}
-
-	/*
-	* Calculate the HMAC-MD5, of a key and some data (raw strings)
-	*/
-	function rstr_hmac_md5(key, data) {
-		var i,
-		    bkey = rstr2binl(key),
-		    ipad = [],
-		    opad = [],
-		    hash;
-		ipad[15] = opad[15] = undefined;
-		if (bkey.length > 16) {
-			bkey = binl_md5(bkey, key.length * 8);
-		}
-		for (i = 0; i < 16; i += 1) {
-			ipad[i] = bkey[i] ^ 0x36363636;
-			opad[i] = bkey[i] ^ 0x5C5C5C5C;
-		}
-		hash = binl_md5(ipad.concat(rstr2binl(data)), 512 + data.length * 8);
-		return binl2rstr(binl_md5(opad.concat(hash), 512 + 128));
-	}
-
-	/*
-	* Convert a raw string to a hex string
-	*/
-	function rstr2hex(input) {
-		var hex_tab = "0123456789abcdef",
-		    output = "",
-		    x,
-		    i;
-		for (i = 0; i < input.length; i += 1) {
-			x = input.charCodeAt(i);
-			output += hex_tab.charAt((x >>> 4) & 0x0F) +
-				hex_tab.charAt(x & 0x0F);
-		}
-		return output;
-	}
-
-	/*
-	* Encode a string as utf-8
-	*/
-	function str2rstr_utf8(input) {
-		return unescape(encodeURIComponent(input));
-	}
-
-	/*
-	* Take string arguments and return either raw or hex encoded strings
-	*/
-	function raw_md5(s) {
-		return rstr_md5(str2rstr_utf8(s));
-	}
-	function hex_md5(s) {
-		return rstr2hex(raw_md5(s));
-	}
-	function raw_hmac_md5(k, d) {
-		return rstr_hmac_md5(str2rstr_utf8(k), str2rstr_utf8(d));
-	}
-	function hex_hmac_md5(k, d) {
-		return rstr2hex(raw_hmac_md5(k, d));
-	}
-
-	/**
-	 * Calculates the MD5 of the specified string and optional key.
-	 *
-	 * @param {string} string Input string
-	 * @param {string} [key] Key
-	 * @param {boolean} [raw] Whether or not to return data raw MD5 (versus hex-encoded)
-	 *
-	 * @returns {string} Raw or hex-encoded MD5 of the input string and key
-	 *
-	 * @memberof BOOMR.utils.MD5
-	 */
-	function md5(string, key, raw) {
-		if (!key) {
-			if (!raw) {
-				return hex_md5(string);
-			}
-			return raw_md5(string);
-		}
-		if (!raw) {
-			return hex_hmac_md5(key, string);
-		}
-		return raw_hmac_md5(key, string);
-	}
-
-	return md5;
+	return fnv;
 }());

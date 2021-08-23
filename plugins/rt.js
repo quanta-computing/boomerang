@@ -68,6 +68,12 @@
  *   - `spa` for SPA Soft Navigations
  *   - `spa_hard` for SPA Hard Navigations
  * * `fetch.bnu`: For XHR beacons from fetch API requests, `1` if fetch response body was not used.
+ * * `rt.tt`: Sum of load times across session
+ * * `rt.obo`: Number of pages in session that did not have a load time
+ * * `xhr.ru`: final response URL after any redirects
+ *    - `XMLHttpRequest`: it will be present if any redirects happened
+ *       and final URL is not equivalent to the final response URL after any redirects.
+ *    - `fetch`: it will only be present if any redirects happened
  *
  * ## Cookie
  *
@@ -221,8 +227,8 @@
 		// details.
 		crossdomain_sending: false,
 
-		// Vars that were added to the beacon that we can remove after beaconing
-		addedVars: [],
+		// navigationStart source: navigation, csi, gtb
+		navigationStartSource: "",
 
 		/**
 		 * Merge new cookie `params` onto current cookie, and set `timer` param on cookie to current timestamp
@@ -375,7 +381,7 @@
 				// If the cookie didn't have a good session start time, we'll use the earliest
 				// time that we know about... either when the boomerang loader showed up on page
 				// or when the first bytes of boomerang loaded up.
-				BOOMR.session.start = BOOMR.t_lstart || BOOMR.t_start;
+				BOOMR.session.start = BOOMR.plugins.RT.navigationStart() || BOOMR.t_lstart || BOOMR.t_start;
 			}
 
 			if (subcookies.si && subcookies.si.match(/-/)) {
@@ -452,7 +458,7 @@
 				}
 
 				// Now we reset the session
-				BOOMR.session.start = t_start || BOOMR.t_lstart || BOOMR.t_start;
+				BOOMR.session.start = t_start || BOOMR.plugins.RT.navigationStart() || BOOMR.t_lstart || BOOMR.t_start;
 				BOOMR.session.length = 0;
 				BOOMR.session.rate_limited = false;
 				impl.loadTime = 0;
@@ -492,6 +498,7 @@
 		 */
 		initFromCookie: function() {
 			var urlHash, docReferrerHash, subcookies;
+
 			subcookies = BOOMR.plugins.RT.getCookie();
 
 			if (!this.cookie) {
@@ -509,8 +516,8 @@
 			// we check if the start time is usable.
 			if (subcookies.s && (subcookies.r || subcookies.nu)) {
 				this.r = subcookies.r;
-				urlHash = BOOMR.utils.MD5(d.URL);
-				docReferrerHash = BOOMR.utils.MD5((d && d.referrer) || "");
+				urlHash = BOOMR.utils.hashString(d.URL);
+				docReferrerHash = BOOMR.utils.hashString((d && d.referrer) || "");
 
 				// Either the URL of the page setting the cookie needs to match document.referrer
 				BOOMR.debug("referrer check: " + this.r + " =?= " + docReferrerHash, "rt");
@@ -581,7 +588,7 @@
 			BOOMR.debug("Incrementing Session Details... ", "RT");
 			BOOMR.session.length++;
 
-			if (isNaN(impl.timers.t_done.delta)) {
+			if (!impl.timers.t_done || isNaN(impl.timers.t_done.delta)) {
 				impl.oboError++;
 			}
 			else {
@@ -658,14 +665,19 @@
 								trimTiming(res.redirectStart, startTime)
 							].join(",").replace(/,+$/, "");
 
-							BOOMR.addVar(url, data);
-							impl.addedVars.push(url);
+							BOOMR.addVar(url, data, true);
 						}
 					}
 				}
 			}
 			catch (e) {
-				BOOMR.addError(e, "rt.getBoomerangTimings");
+				/**
+				 * We wrap specific Firefox 31 and 32 when we get Error when inspecting window.performance
+				 * Details: https://bugzilla.mozilla.org/show_bug.cgi?id=1045096
+				 */
+				if (e && e.name && e.name.hasOwnProperty("length") && e.name.indexOf("NS_ERROR_FAILURE") === -1) {
+					BOOMR.addError(e, "rt.getBoomerangTimings");
+				}
 			}
 		},
 
@@ -693,9 +705,9 @@
 			// http://code.google.com/chrome/whitepapers/prerender.html
 
 			BOOMR.plugins.RT.startTimer("t_load", this.navigationStart);
-			BOOMR.plugins.RT.endTimer("t_load");					// this will measure actual onload time for a prerendered page
+			BOOMR.plugins.RT.endTimer("t_load"); // this will measure actual onload time for a prerendered page
 			BOOMR.plugins.RT.startTimer("t_prerender", this.navigationStart);
-			BOOMR.plugins.RT.startTimer("t_postrender");				// time from prerender to visible or hidden
+			BOOMR.plugins.RT.startTimer("t_postrender"); // time from prerender to visible or hidden
 
 			return true;
 		},
@@ -706,7 +718,7 @@
 		 * It sets the beacon parameter `rt.start` to the source of the timer
 		 */
 		initFromNavTiming: function() {
-			var ti, p, source;
+			var ti, p;
 
 			if (this.navigationStart) {
 				return;
@@ -724,6 +736,8 @@
 
 			if (p && p.timing) {
 				ti = p.timing;
+
+				this.navigationStartSource = "navigation";
 			}
 			else if (w.chrome && w.chrome.csi && w.chrome.csi().startE) {
 				// Older versions of chrome also have a timing API that's sort of documented here:
@@ -733,7 +747,8 @@
 				ti = {
 					navigationStart: w.chrome.csi().startE
 				};
-				source = "csi";
+
+				this.navigationStartSource = "csi";
 			}
 			else if (w.gtbExternal && w.gtbExternal.startE()) {
 				// The Google Toolbar exposes navigation start time similar to old versions of chrome
@@ -741,7 +756,8 @@
 				ti = {
 					navigationStart: w.gtbExternal.startE()
 				};
-				source = "gtb";
+
+				this.navigationStartSource = "gtb";
 			}
 
 			if (ti) {
@@ -750,7 +766,6 @@
 				// on it don't get sent back.  Never use requestStart since if
 				// the first request fails and the browser retries, it will contain
 				// the value for the new request.
-				BOOMR.addVar("rt.start", source || "navigation");
 				this.navigationStart = ti.navigationStart || ti.fetchStart || undefined;
 				this.fetchStart = ti.fetchStart || undefined;
 				this.responseStart = ti.responseStart || undefined;
@@ -823,9 +838,12 @@
 		setPageLoadTimers: function(ename, t_done, data) {
 			var t_resp_start, t_fetch_start, p, navSt;
 
-			if (ename !== "xhr") {
+			if (ename !== "xhr" && !(ename === "early" && data && BOOMR.utils.inArray(data.initiator, BOOMR.constants.BEACON_TYPE_SPAS))) {
 				impl.initFromCookie();
 				impl.initFromNavTiming();
+
+				// add rt.start for the source
+				BOOMR.addVar("rt.start", this.navigationStartSource);
 
 				if (impl.checkPreRender()) {
 					return false;
@@ -873,7 +891,8 @@
 				t_resp_start = impl.t_fb_approx;
 			}
 
-			if (t_resp_start) {
+			// early beacons should not have t_resp and t_page since the load hasn't occurred yet
+			if (t_resp_start && ename !== "early") {
 				// if we have a fetch start as well, set the specific timestamps instead of from rt.start
 				if (t_fetch_start) {
 					BOOMR.plugins.RT.setTimer("t_resp", t_fetch_start, t_resp_start);
@@ -893,7 +912,16 @@
 					// clients, where responseEnd happens after all other NavTiming events.
 					//
 					if (t_done < t_resp_start) {
-						BOOMR.addVar("t_page.inv", 1);
+						BOOMR.addVar("t_page.inv", 1, true);
+					}
+					else if ((t_done - t_resp_start === 0) &&
+					         (data && data.timing && data.timing.requestStart) &&
+					         (impl.timers.t_resp && impl.timers.t_resp.delta)) {
+						// if t_page would be zero, try calculating t_page based on the inversion of t_resp
+						// this could happen for XHRs that were started by a click/DOM
+						BOOMR.plugins.RT.setTimer(
+							"t_page",
+							(t_done - data.timing.requestStart) - impl.timers.t_resp.delta);
 					}
 					else {
 						BOOMR.plugins.RT.setTimer("t_page", t_done - t_resp_start);
@@ -920,22 +948,37 @@
 		 * - rt.end:    The timestamp when the t_done timer ended
 		 *
 		 * @param t_start The value of t_start that we plan to use
+		 * @param ename The event name that resulted in this call
 		 */
-		setSupportingTimestamps: function(t_start) {
+		setSupportingTimestamps: function(t_start, ename) {
 			if (t_start) {
-				BOOMR.addVar("rt.tstart", t_start);
+				BOOMR.addVar("rt.tstart", t_start, true);
 			}
+
 			if (typeof impl.navigationStart === "number" && impl.navigationStart !== t_start) {
-				BOOMR.addVar("rt.nstart", impl.navigationStart);
+				BOOMR.addVar("rt.nstart", impl.navigationStart, true);
 			}
+
 			if (typeof impl.t_start === "number" && impl.t_start !== t_start) {
-				BOOMR.addVar("rt.cstart", impl.t_start);
+				BOOMR.addVar("rt.cstart", impl.t_start, true);
 			}
-			BOOMR.addVar("rt.bstart", BOOMR.t_start);
+
+			BOOMR.addVar("rt.bstart", BOOMR.t_start, true);
+
 			if (BOOMR.t_lstart) {
-				BOOMR.addVar("rt.blstart", BOOMR.t_lstart);
+				BOOMR.addVar("rt.blstart", BOOMR.t_lstart, true);
 			}
-			BOOMR.addVar("rt.end", impl.timers.t_done.end);	// don't just use t_done because dev may have called endTimer before we did
+
+			// early beacons don't have t_done, send t_start (or now) as rt.end
+			if (ename === "early") {
+				BOOMR.addVar("rt.end", t_start ? t_start : BOOMR.now(), true);
+			}
+			else {
+				if (impl.timers.t_done) {
+					// don't just use t_done because dev may have called endTimer before we did
+					BOOMR.addVar("rt.end", impl.timers.t_done.end, true);
+				}
+			}
 		},
 
 		/**
@@ -946,17 +989,17 @@
 		 * Else, if we have a cached timestamp from an earlier call, use that
 		 * Else, give up
 		 *
-		 * @param ename	The event name that resulted in this call. Special consideration for "xhr"
+		 * @param ename The event name that resulted in this call. Special consideration for "xhr"
 		 * @param data  Data passed in from the event caller. If the event name is "xhr",
 		 *              this should contain the page group name for the xhr call in an attribute called `name`
-		 *		and optionally, detailed timing information in a sub-object called `timing`
+		 *              and optionally, detailed timing information in a sub-object called `timing`
 		 *              and resource information in a sub-object called `resource`
 		 *
 		 * @returns the determined value of t_start or undefined if unknown
 		 */
 		determineTStart: function(ename, data) {
 			var t_start;
-			if (ename === "xhr") {
+			if (ename === "xhr" || (ename === "early" && data && data.initiator === "spa")) {
 				if (data && data.name && impl.timers[data.name]) {
 					// For xhr timers, t_start is stored in impl.timers.xhr_{page group name}
 					// and xhr.pg is set to {page group name}
@@ -982,15 +1025,21 @@
 					t_start = impl.navigationStart;
 				}
 				else if (impl.t_start && impl.navigationType !== 2) {
-					t_start = impl.t_start;			// 2 is TYPE_BACK_FORWARD but the constant may not be defined across browsers
-					BOOMR.addVar("rt.start", "cookie");	// if the user hit the back button, referrer will match, and cookie will match
-				}						// but will have time of previous page start, so t_done will be wrong
+					// 2 is TYPE_BACK_FORWARD but the constant may not be defined across browsers
+					t_start = impl.t_start;
+
+					// if the user hit the back button, referrer will match, and cookie will match
+					BOOMR.addVar("rt.start", "cookie");
+				}
 				else if (impl.cached_t_start) {
+					// but will have time of previous page start, so t_done will be wrong
 					t_start = impl.cached_t_start;
 				}
 				else {
+					// force all timers to NaN state
 					BOOMR.addVar("rt.start", "none");
-					t_start = undefined;			// force all timers to NaN state
+
+					t_start = undefined;
 				}
 
 				impl.cached_t_start = t_start;
@@ -1020,7 +1069,7 @@
 				BOOMR.debug("Transitioned from prerender to " + BOOMR.visibilityState(), "rt");
 
 				// note that we transitioned from prerender on the beacon for debugging
-				BOOMR.addVar("vis.pre", "1");
+				BOOMR.addVar("vis.pre", "1", true);
 
 				// send a beacon
 				BOOMR.plugins.RT.done(null, "visible");
@@ -1046,7 +1095,7 @@
 			//
 			this.updateCookie(
 				(!impl.navigationStart && impl.strict_referrer) ? {
-					"r": BOOMR.utils.MD5(d.URL)
+					"r": BOOMR.utils.hashString(d.URL)
 				} : null,
 				edata.type === "beforeunload" ? "ul" : "hd"
 			);
@@ -1079,13 +1128,11 @@
 
 				this.updateCookie(
 					{
-						"nu": BOOMR.utils.MD5(value)
+						"nu": BOOMR.utils.hashString(value)
 					},
 					"cl");
 
-				BOOMR.addVar("nu", BOOMR.utils.cleanupURL(value));
-
-				impl.addedVars.push("nu");
+				BOOMR.addVar("nu", BOOMR.utils.cleanupURL(value), true);
 			}
 		},
 
@@ -1129,14 +1176,15 @@
 		},
 
 		domloaded: function() {
-			BOOMR.plugins.RT.endTimer("t_domloaded");
+			if (BOOMR.plugins.RT) {
+				BOOMR.plugins.RT.endTimer("t_domloaded");
+			}
 		},
 
-		clear: function() {
-			BOOMR.removeVar("rt.start");
-			if (impl.addedVars && impl.addedVars.length > 0) {
-				BOOMR.removeVar(impl.addedVars);
-				impl.addedVars = [];
+		clear: function(edata) {
+			// if it's an early beacon we want to keep rt.start for the next beacon
+			if (!edata || typeof edata.early === "undefined") {
+				BOOMR.removeVar("rt.start");
 			}
 		},
 
@@ -1252,6 +1300,7 @@
 			BOOMR.subscribe("prerender_to_visible", impl.prerenderToVisible, null, impl);
 			BOOMR.subscribe("page_ready", this.done, "load", this);
 			BOOMR.subscribe("xhr_load", this.done, "xhr", this);
+			BOOMR.subscribe("before_early_beacon", this.done, "early", this);
 			BOOMR.subscribe("dom_loaded", impl.domloaded, null, impl);
 			BOOMR.subscribe("page_unload", impl.page_unload, null, impl);
 			BOOMR.subscribe("click", impl.onclick, null, impl);
@@ -1414,8 +1463,7 @@
 					}
 
 					if (impl.basic_timers.hasOwnProperty(t_name)) {
-						BOOMR.addVar(t_name, timer.delta);
-						impl.addedVars.push(t_name);
+						BOOMR.addVar(t_name, timer.delta, true);
 					}
 					else {
 						t_other.push(t_name + "|" + timer.delta);
@@ -1424,13 +1472,12 @@
 			}
 
 			if (t_other.length) {
-				BOOMR.addVar("t_other", t_other.join(","));
-				impl.addedVars.push("t_other");
+				BOOMR.addVar("t_other", t_other.join(","), true);
 			}
 
-			if (source === "beacon") {
+			if (source === "beacon" && (!vars || typeof vars.early === "undefined")) {
 				impl.timers = {};
-				impl.complete = false;	// reset this state for the next call
+				impl.complete = false;  // reset this state for the next call
 			}
 		},
 
@@ -1449,6 +1496,11 @@
 		done: function(edata, ename) {
 			BOOMR.debug("Called done: " + ename, "rt");
 
+			if (!BOOMR.plugins.RT) {
+				// something removed us
+				return;
+			}
+
 			var t_start, t_done, t_now = BOOMR.now(),
 			    subresource = false;
 
@@ -1457,7 +1509,7 @@
 
 			t_done = impl.validateLoadTimestamp(t_now, edata, ename);
 
-			if (ename === "load" || ename === "visible" || ename === "xhr") {
+			if (ename === "load" || ename === "visible" || ename === "xhr" || ename === "early") {
 				if (!impl.setPageLoadTimers(ename, t_done, edata)) {
 					return this;
 				}
@@ -1465,8 +1517,12 @@
 
 			if (ename === "load" ||
 			    ename === "visible" ||
+			    (ename === "early" &&
+			        (!edata /* dom_loaded */ ||
+			        typeof edata.initiator === "undefined" /* onconfig */ ||
+			        edata.initiator === "spa_hard")) ||
 			    (ename === "xhr" && edata && edata.initiator === "spa_hard")) {
-				// Only add Boomerang timings to page load and SPA beacons
+				// Only add Boomerang timings to normal or early page load and SPA hard beacons
 				impl.getBoomerangTimings();
 			}
 
@@ -1478,7 +1534,9 @@
 
 			// If the dev has already called endTimer, then this call will do nothing
 			// else, it will stop the page load timer
-			this.endTimer("t_done", t_done);
+			if (ename !== "early") {
+				this.endTimer("t_done", t_done);
+			}
 
 			// For XHR events, ensure t_done is set with the proper start, end, and
 			// delta timestamps.  Until Issue #195 is fixed, if this XHR is firing
@@ -1489,15 +1547,7 @@
 				this.setTimer("t_done", edata.timing.requestStart, edata.timing.loadEventEnd);
 			}
 
-			// make sure old variables don't stick around
-			BOOMR.removeVar(
-				"t_done", "t_page", "t_resp", "t_postrender", "t_prerender", "t_load", "t_other",
-				"rt.tstart", "rt.nstart", "rt.cstart", "rt.bstart", "rt.end", "rt.subres",
-				"http.errno", "http.method", "http.type", "xhr.sync", "fetch.bnu",
-				"rt.ss", "rt.sl", "rt.tt", "rt.lt"
-			);
-
-			impl.setSupportingTimestamps(t_start);
+			impl.setSupportingTimestamps(t_start, ename);
 
 			this.addTimersToBeacon(null, ename);
 
@@ -1513,45 +1563,46 @@
 				subresource = edata.subresource;
 
 				if (edata.url) {
-					BOOMR.addVar("u", BOOMR.utils.cleanupURL(edata.url.replace(/#.*/, "")));
-					impl.addedVars.push("u");
+					BOOMR.addVar("u", BOOMR.utils.cleanupURL(edata.url.replace(/#.*/, "")), true);
 				}
 
 				if (edata.status && (edata.status < -1 || edata.status >= 400)) {
-					BOOMR.addVar("http.errno", edata.status);
+					BOOMR.addVar("http.errno", edata.status, true);
 				}
 
 				if (edata.method && edata.method !== "GET") {
-					BOOMR.addVar("http.method", edata.method);
+					BOOMR.addVar("http.method", edata.method, true);
 				}
 
 				if (edata.type && edata.type !== "xhr") {
-					BOOMR.addVar("http.type", edata.type[0]);  // just send first char
+					// just send first char
+					BOOMR.addVar("http.type", edata.type[0], true);
 				}
 
 				if (edata.headers) {
-					BOOMR.addVar("http.hdr", edata.headers);
+					BOOMR.addVar("http.hdr", edata.headers, true);
 				}
 
 				if (edata.synchronous) {
-					BOOMR.addVar("xhr.sync", 1);
+					BOOMR.addVar("xhr.sync", 1, true);
 				}
 
 				if (edata.initiator) {
-					BOOMR.addVar("http.initiator", edata.initiator);
+					BOOMR.addVar("http.initiator", edata.initiator, true);
 				}
 
 				if (edata.responseBodyNotUsed) {
-					BOOMR.addVar("fetch.bnu", 1);
+					BOOMR.addVar("fetch.bnu", 1, true);
 				}
 
-				impl.addedVars.push("http.errno", "http.method", "http.hdr", "xhr.sync", "http.initiator", "fetch.bnu");
+				if (edata.responseUrl) {
+					BOOMR.addVar("xhr.ru", BOOMR.utils.cleanupURL(edata.responseUrl), true);
+				}
 			}
 
 			// This is an explicit subresource
 			if (subresource && subresource !== "passive") {
-				BOOMR.addVar("rt.subres", 1);
-				impl.addedVars.push("rt.subres");
+				BOOMR.addVar("rt.subres", 1, true);
 			}
 
 			// we're in onload
@@ -1569,26 +1620,27 @@
 			BOOMR.addVar({
 				"rt.tt": impl.loadTime,
 				"rt.obo": impl.oboError
-			});
-
-			impl.addedVars.push("rt.tt", "rt.obo");
+			}, undefined, true);
 
 			impl.updateCookie();
 
 			if (ename === "unload") {
-				BOOMR.addVar("rt.quit", "");
+				BOOMR.addVar("rt.quit", "", true);
 
 				if (!impl.onloadfired) {
-					BOOMR.addVar("rt.abld", "");
-					impl.addedVars.push("rt.abld");
+					BOOMR.addVar("rt.abld", "", true);
 				}
 
 				if (!impl.visiblefired) {
-					BOOMR.addVar("rt.ntvu", "");
+					BOOMR.addVar("rt.ntvu", "", true);
 				}
 			}
 
-			impl.complete = true;
+			// mark complete if not an early beacon.
+			// We want load beacons to re-run this after an early beacon
+			if (ename !== "early") {
+				impl.complete = true;
+			}
 
 			BOOMR.sendBeacon(impl.beacon_url);
 
@@ -1602,8 +1654,10 @@
 		 * @memberof BOOMR.plugins.RT
 		 */
 		is_complete: function(vars) {
-			// allow error beacons to go through even if we're not complete
-			return impl.complete || (vars && vars["http.initiator"] === "error");
+			// allow error and early beacons to go through even if we're not complete
+			return impl.complete ||
+			    (vars && vars["http.initiator"] === "error") ||
+			    (vars && typeof vars.early !== "undefined");
 		},
 
 		/**
@@ -1696,8 +1750,21 @@
 			if (!impl.navigationStart) {
 				impl.initFromNavTiming();
 			}
+
 			return impl.navigationStart;
 		}
+
+		/* BEGIN_DEBUG */,
+		/**
+		 * Resets cached timings (for testing)
+		 */
+		resetTimings: function() {
+			impl.navigationStart = undefined;
+			impl.responseStart = undefined;
+			impl.loadTime = 0;
+			impl.cached_t_start = undefined;
+		}
+		/* END_DEBUG */
 	};
 
 }(window));

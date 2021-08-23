@@ -1,6 +1,8 @@
 /**
  * The PaintTiming plugin collects paint metrics exposed by the W3C
- * [Paint Timing]{@link https://www.w3.org/TR/paint-timing/} specification.
+ * [Paint Timing]{@link https://www.w3.org/TR/paint-timing/} and
+ * [Largest Contentful Paint]{@link https://wicg.github.io/largest-contentful-paint/}
+ * specifications.
  *
  * For information on how to include this plugin, see the {@tutorial building} tutorial.
  *
@@ -12,10 +14,12 @@
  *
  * * `pt.fp`: `first-paint` in `DOMHighResTimestamp`
  * * `pt.fcp`: `first-contentful-paint` in `DOMHighResTimestamp`
+ * * `pt.lcp`: `largest-contentful-paint` in `DOMHighResTimestamp`
  * * `pt.hid`: The document was loaded hidden (at some point), so FP and FCP are
  *             user-driven events, and thus won't be added to the beacon.
  *
  * @see {@link https://www.w3.org/TR/paint-timing/}
+ * @see {@link https://wicg.github.io/largest-contentful-paint/}
  * @class BOOMR.plugins.PaintTiming
  */
 (function() {
@@ -33,7 +37,8 @@
 	 */
 	var PAINT_TIMING_MAP = {
 		"first-paint": "fp",
-		"first-contentful-paint": "fcp"
+		"first-contentful-paint": "fcp",
+		"largest-contentful-paint": "lcp"
 	};
 
 	/**
@@ -59,6 +64,21 @@
 		 * Cached PaintTiming values
 		 */
 		timingCache: {},
+
+		/* BEGIN_DEBUG */
+		/**
+		 * History of timings
+		 */
+		timingHistory: {},
+		/* END_DEBUG */
+
+		/**
+		 * LCP observer
+		 */
+		observer: null,
+
+		// Metrics that will be exported
+		externalMetrics: {},
 
 		/**
 		 * Executed on `page_ready`, `xhr_load` and `before_unload`
@@ -116,6 +136,43 @@
 
 				BOOMR.sendBeacon();
 			}
+		},
+
+		/**
+		 * Performance observer callback for LCP
+		 *
+		 * @param {PerformanceEntry[]} list Performance entries
+		 */
+		onObserver: function(list) {
+			var entries = list.getEntries();
+			if (entries.length === 0) {
+				return;
+			}
+
+			// Use the latest one
+			var lcp = entries[entries.length - 1];
+
+			// LCP can change over time, so always take the latest value.  Use renderTime
+			// if available (for same-origin resources or if they have Timing-Allow-Origin),
+			// otherwise loadTime is the best we can get.
+			var lcpTime = lcp.renderTime || lcp.loadTime;
+
+			// cache it for others who want to use it
+			impl.timingCache[lcp.entryType] = lcpTime;
+
+			/* BEGIN_DEBUG */
+			/**
+			 * History of timings
+			 */
+			impl.timingHistory[lcp.entryType] = impl.timingHistory[lcp.entryType] || [];
+			impl.timingHistory[lcp.entryType].push(lcpTime);
+			/* END_DEBUG */
+
+			BOOMR.addVar("pt.lcp", Math.floor(lcpTime), true);
+
+			impl.externalMetrics.lcp = function() {
+				return Math.floor(lcpTime);
+			};
 		}
 	};
 
@@ -152,6 +209,13 @@
 				BOOMR.subscribe("page_ready", impl.done, "load", impl);
 				BOOMR.subscribe("xhr_load", impl.done, "xhr", impl);
 				BOOMR.subscribe("before_unload", impl.done, null, impl);
+
+				// create a PO for LCP
+				if (typeof BOOMR.window.PerformanceObserver === "function" &&
+				    typeof window.LargestContentfulPaint === "function") {
+					impl.observer = new BOOMR.window.PerformanceObserver(impl.onObserver);
+					impl.observer.observe({ type: "largest-contentful-paint", buffered: true });
+				}
 
 				impl.initialized = true;
 			}
@@ -241,7 +305,19 @@
 					}
 				}
 			}
-		}
+		},
+
+		/* BEGIN_DEBUG */
+		/**
+		 * Get the history of timings for the specified metric
+		 */
+		getHistoryFor: function(timingName) {
+			return impl.timingHistory[timingName] || [];
+		},
+		/* END_DEBUG */
+
+		// external metrics
+		metrics: impl.externalMetrics
 	};
 
 }());

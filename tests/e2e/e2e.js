@@ -7,6 +7,7 @@
 var chai = require("chai");
 var assert = chai.assert;
 var path = require("path");
+var grunt = require("grunt");
 
 var testsFile = path.join(__dirname, "e2e.json");
 var tests = require(testsFile).tests;
@@ -14,26 +15,29 @@ var servers = require(testsFile).server;
 var ports = require(testsFile).ports;
 
 var disabledTests = require("./e2e.disabled.json");
+var buildFlavor = (grunt.option("build-flavor") || "") || process.env.BUILD_FLAVOR;
 
 //
 // Functions
 //
-function run(testPath, file) {
+function run(i, testPath, file, flavor) {
 	describe(testPath, function() {
 		var fileName = file + ".html";
 
-		it("Should pass " + testPath + "/" + fileName, function(done) {
+		it(file + (buildFlavor ? ("." + buildFlavor) : ""), function(done) {
+			var url = servers.scheme + "://" + servers.main + ":" + ports.main + "/pages/" + testPath + "/" + fileName;
 
 			if (typeof browser.waitForAngularEnabled === "function") {
 				browser.waitForAngularEnabled(false);
 			}
 
 			console.log(
+				i,
 				"Navigating to",
-				"http://" + servers.main + ":" + ports.main + "/pages/" + testPath + "/" + fileName
+				url
 			);
 
-			browser.driver.get("http://" + servers.main + ":" + ports.main + "/pages/" + testPath + "/" + fileName);
+			browser.driver.get(url);
 
 			browser.driver.wait(function() {
 				return element(by.css("#BOOMR_test_complete")).isPresent();
@@ -63,12 +67,18 @@ for (var i = 0; i < disabledTests.length; i++) {
 //
 // Run the tests in e2e.json
 //
-for (i = 0; i < tests.length; i++) {
+var start = parseInt(process.env.CI_NODE_INDEX) || 0;
+var steps = parseInt(process.env.CI_NODE_TOTAL) || 1;
+
+console.log("START: " + start);
+console.log("STEPS: " + steps);
+
+for (i = start; i < tests.length; i += steps) {
 	var data = tests[i];
 	key = data.path + "-" + data.file;
 	if (disabledTestLookup[key]) {
 		continue;
 	}
 
-	run(data.path, data.file);
+	run(i, data.path, data.file, buildFlavor);
 }

@@ -29,7 +29,6 @@
  * * Hardware
  *   * `scr.mtp`: [`navigator.maxTouchPoints`](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/maxTouchPoints)
  *   * `cpu.cnc`: [`navigator.hardwareConcurrency`](https://developer.mozilla.org/en-US/docs/Web/API/NavigatorConcurrentHardware/hardwareConcurrency)
- *   * `bat.lvl`: [Battery API](https://developer.mozilla.org/en-US/docs/Web/API/Battery_Status_API) level
  * * DOM
  *   * `dom.ln`: Number of DOM nodes in the main frame
  *   * `dom.sz`: Number of HTML bytes of of the main frame
@@ -46,6 +45,8 @@
  *   * `dom.link`: Number of `LINK` nodes in the main frame
  *   * `dom.link.css`: Number of `rel="stylesheet"` `LINK` nodes in the main frame
  *   * `dom.link.css.uniq`: Number of unique `rel="stylesheet"` `LINK` nodes in the main frame
+ * * Net
+ *   * `net.sd`: Boolean stating whether the user has data saver turned on or not
  *
  * @class BOOMR.plugins.Memory
  */
@@ -58,6 +59,21 @@
 	if (BOOMR.plugins.Memory) {
 		return;
 	}
+
+	/**
+	 * This flag protects us from a hard loop/blocking the browser
+	 * when we get an exception when calling BOOMR.utils.arrayFilter()
+	 * from the Memory plugin and we send an error beacon after onload.
+	 *
+	 * Why we get a hard loop?
+	 *
+	 * When we send an error beacon then Boomerang will call
+	 * the done() function from the Memory plugin. If at some line
+	 * in the done() function we get an error then an error beacon will
+	 * be sent again and we will fall in to a hard loop.
+	 *
+	 */
+	var hasTriggeredArrayFilterError = false;
 
 	/**
 	 * Count elements of a given type and return the count or an object with the
@@ -117,7 +133,10 @@
 						}
 					}
 					catch (err) {
-						BOOMR.addError(err, "Memory.nodeList." + type + ".filter[" + (i - 2) + "]");
+						if (!hasTriggeredArrayFilterError) {
+							hasTriggeredArrayFilterError = true;
+							BOOMR.addError(err, "Memory.nodeList." + type + ".filter[" + (i - 2) + "]");
+						}
 					}
 				}
 
@@ -240,17 +259,11 @@
 					if (n.maxTouchPoints) {
 						BOOMR.addVar("scr.mtp", n.maxTouchPoints);
 					}
-				},
-				"navigator"
-			);
-
-			errorWrap(b,
-				function() {
-					if (b && typeof b.level === "number") {
-						BOOMR.addVar("bat.lvl", b.level);
+					if (n.connection && n.connection.hasOwnProperty("saveData")) {
+						BOOMR.addVar("net.sd", n.connection.saveData ? 1 : 0);
 					}
 				},
-				"battery"
+				"navigator"
 			);
 
 			errorWrap(true,

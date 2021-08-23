@@ -22,9 +22,22 @@
 <body>
 	<div id="output"></div>
 	<script>
+	// create a plugin that will run last
+	BOOMR.plugins.ONUNLOADTEST = {
+		init: function() {
+			BOOMR.subscribe("before_unload", function() {
+				BOOMR.addVar("onunloadtest", 1);
+			});
+		},
+		is_complete: function() {
+			return true;
+		}
+	};
+
 	BOOMR_test.init({
 		site_domain: "boomerang-test.local"
 	});
+
 	document.getElementById("output").innerHTML = "Generic Page w/ Boomerang";
 	document.getElementById("output").innerHTML += " " + document.location;
 	</script>

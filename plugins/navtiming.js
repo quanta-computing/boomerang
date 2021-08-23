@@ -203,10 +203,7 @@
 				}
 			}
 
-			BOOMR.addVar(data);
-
-			try { impl.addedVars.push.apply(impl.addedVars, Object.keys(data)); }
-			catch (ignore) { /* empty */ }
+			BOOMR.addVar(data, undefined, true);
 
 			impl.sendBeacon();
 		},
@@ -218,8 +215,6 @@
 			if (this.complete) {
 				return this;
 			}
-
-			impl.addedVars = [];
 
 			p = BOOMR.getPerformance();
 
@@ -374,7 +369,7 @@
 					}
 				}
 
-				BOOMR.addVar(data);
+				BOOMR.addVar(data, undefined, true);
 
 				//
 				// Basic browser bug detection for known cases where NavigationTiming
@@ -387,16 +382,7 @@
 				    (pt.navigationStart && pt.fetchStart < pt.navigationStart) ||
 				    (pt.responseEnd && pt.responseEnd > BOOMR.now() + 8.64e+7)
 				)) {
-					BOOMR.addVar("nt_bad", 1);
-					impl.addedVars.push("nt_bad");
-				}
-
-				// ensure all vars are removed at beacon
-				try {
-					impl.addedVars.push.apply(impl.addedVars, Object.keys(data));
-				}
-				catch (ignore) {
-					/* empty */
+					BOOMR.addVar("nt_bad", 1, true);
 				}
 
 				if (data.nt_load_end > 0) {
@@ -407,13 +393,10 @@
 			impl.sendBeacon();
 		},
 
-		clear: function() {
-			if (impl.addedVars && impl.addedVars.length > 0) {
-				BOOMR.removeVar(impl.addedVars);
-				impl.addedVars = [];
-			}
-			// if we ever sent the full data, we're complete for all times
-			this.complete = this.fullySent;
+		clear: function(edata) {
+			// Allow the data to go out on both an Early beacon and the regular Page Load beacon,
+			// but after that, if we ever sent the full data, we're complete for all times.
+			this.complete = !(edata && edata.early) && this.fullySent;
 		},
 
 		prerenderToVisible: function() {
@@ -423,6 +406,15 @@
 
 			// add our data to the beacon
 			this.done();
+		},
+
+		onBeforeEarlyBeacon: function(edata) {
+			// Add our data to the early beacon
+			if (!edata /* dom_loaded */ ||
+			    typeof edata.initiator === "undefined" /* onconfig */ ||
+			    edata.initiator === "spa_hard") {
+				this.done();
+			}
 		}
 	};
 
@@ -442,8 +434,9 @@
 				// we'll fire on whichever happens first
 				BOOMR.subscribe("page_ready", impl.done, null, impl);
 				BOOMR.subscribe("prerender_to_visible", impl.prerenderToVisible, null, impl);
+				BOOMR.subscribe("before_early_beacon", impl.onBeforeEarlyBeacon, null, impl);
 				// BOOMR.subscribe("xhr_load", impl.xhr_done, null, impl);
-				BOOMR.subscribe("before_beacon", impl.done, null, impl);
+				BOOMR.subscribe("before_unload", impl.done, null, impl);
 				BOOMR.subscribe("beacon", impl.clear, null, impl);
 
 				impl.initialized = true;

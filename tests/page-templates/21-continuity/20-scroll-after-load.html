@@ -4,7 +4,7 @@
 <img src="/delay?delay=3000&amp;file=assets/img.jpg" width="200" height="10000" />
 <script>
 BOOMR_test.init({
-	testAfterOnBeacon: true,
+	testAfterOnBeacon: 2,
 	Continuity: {
 		enabled: true,
 		afterOnload: true
@@ -26,7 +26,9 @@ BOOMR_test.init({
 					setTimeout(function() {
 						window.scrollTo(0, 0);
 
-						st.loaded();
+						setTimeout(function() {
+							st.loaded();
+						}, 100);
 					}, 250);
 				}, 3000);
 			}, 250);

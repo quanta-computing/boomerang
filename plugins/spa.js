@@ -112,6 +112,7 @@
 	    firstSpaNav = true,
 	    routeFilter = false,
 	    routeChangeWaitFilter = false,
+	    routeChangeWaitFilterHardNavs = false,
 	    disableHardNav = false,
 	    supported = [],
 	    latestResource,
@@ -152,12 +153,13 @@
 		 * @param {BOOMR.plugins.AutoXHR.Resource} resource Resource
 		 */
 		spaHardMissedOnComplete: function(resource) {
-			var p, navigationStart = (BOOMR.plugins.RT && BOOMR.plugins.RT.navigationStart());
+			var p, navigationStart = (BOOMR.plugins.RT && BOOMR.plugins.RT.navigationStart()),
+			    ev, mh = BOOMR.plugins.AutoXHR.getMutationHandler();
 
 			waitingOnHardMissedComplete = false;
 
 			// note that we missed the route change on the beacon for debugging
-			BOOMR.addVar("spa.missed", "1");
+			BOOMR.addVar("spa.missed", "1", true);
 
 			// ensure t_done is the time we've specified
 			if (BOOMR.plugins.RT) {
@@ -167,22 +169,29 @@
 			// always use the start time of navigationStart
 			resource.timing.requestStart = navigationStart;
 
-			if (resource.resources.length === 0) {
-				// No other resources were fetched, so set the end time
-				// to NavigationTiming's performance.loadEventEnd if available (instead of 'now')
+			ev = mh.pending_events[resource.index];
+			if (!ev || ev.total_nodes === 0) {
+				// No other resources (xhrs or mutations) were detected, so set the end time
+				// to NavigationTiming's page loadEventEnd if available (instead of 'now')
 				p = BOOMR.getPerformance();
-				if (p && p.timing && p.timing.navigationStart && p.timing.loadEventEnd) {
+
+				if (p &&
+				    p.timing &&
+				    p.timing.navigationStart &&
+				    p.timing.loadEventEnd &&
+				    // loadEventEnd may have been set by a wait filter
+				    typeof resource.timing.loadEventEnd === "undefined") {
 					resource.timing.loadEventEnd = p.timing.loadEventEnd;
 				}
 			}
 		},
 
 		/**
-		 * Fired on each beacon.
+		 * Fired on a non-spa page load
 		 */
-		onBeacon: function() {
-			// remove all of the potential parameters we added to the beacon
-			BOOMR.removeVar("spa.missed", "spa.forced", "spa.waiting");
+		pageReady: function() {
+			// a non-spa page load fired, disableHardNav might be enabled
+			initialRouteChangeCompleted = true;
 		}
 	};
 
@@ -197,8 +206,9 @@
 		 *
 		 * @memberof BOOMR.plugins.SPA
 		 */
-		is_complete: function() {
-			return !waitingOnHardMissedComplete;
+		is_complete: function(vars) {
+			// allow error and early beacons to go through even if we're not complete
+			return !waitingOnHardMissedComplete || (vars && (vars["http.initiator"] === "error" || typeof vars.early !== "undefined"));
 		},
 
 		/**
@@ -224,8 +234,7 @@
 			}
 
 			initialized = true;
-
-			BOOMR.subscribe("beacon", impl.onBeacon, null, impl);
+			BOOMR.subscribe("page_ready", impl.pageReady, null, impl);
 		},
 
 		/**
@@ -276,8 +285,6 @@
 			waitingOnHardMissedComplete = true;
 
 			if (!disableHardNav) {
-				// `this` is unbound, use BOOMR.plugins.SPA
-				BOOMR.fireEvent("spa_init", [BOOMR.plugins.SPA.current_spa_nav(), BOOMR.window.document.URL]);
 				// Trigger a route change
 				BOOMR.plugins.SPA.route_change(impl.spaHardMissedOnComplete);
 			}
@@ -323,6 +330,7 @@
 		 * @param {object} [options] Additional options
 		 * @param {BOOMR.plugins.SPA.spaRouteFilter} [options.routeFilter] Route filter
 		 * @param {BOOMR.plugins.SPA.spaRouteChangeWaitFilter} [options.routeChangeWaitFilter] Route change wait filter
+		 * @param {boolean} [options.routeChangeWaitFilterHardNavs] Whether to apply wait filter on hard navs
 		 * @param {boolean} [options.disableHardNav] Disable sending SPA hard beacons
 		 *
 		 * @returns {@link BOOMR.plugins.SPA} The SPA plugin for chaining
@@ -341,6 +349,10 @@
 
 			if (typeof options.routeChangeWaitFilter === "function") {
 				routeChangeWaitFilter = options.routeChangeWaitFilter;
+			}
+
+			if (typeof options.routeChangeWaitFilterHardNavs === "boolean") {
+				routeChangeWaitFilterHardNavs = options.routeChangeWaitFilterHardNavs;
 			}
 
 			if (options.disableHardNav) {
@@ -367,7 +379,7 @@
 		 * begin monitoring downloadable resources to measure the SPA soft navigation.
 		 *
 		 * @param {function} onComplete Called on completion
-		 * @param {object[]} routeFilterArgs Route Filter arguments
+		 * @param {object[]} routeFilterArgs Route Filter arguments array
 		 *
 		 * @memberof BOOMR.plugins.SPA
 		 */
@@ -410,6 +422,9 @@
 			// it in AutoXHR sendEvent
 			var url = BOOMR.window.document.URL;
 
+			// `this` is unbound, use BOOMR.plugins.SPA
+			BOOMR.fireEvent("spa_init", [BOOMR.plugins.SPA.current_spa_nav(), url]);
+
 			// construct the resource we'll be waiting for
 			var resource = {
 				timing: {
@@ -442,7 +457,7 @@
 
 			// if we have a routeChangeWaitFilter, make sure AutoXHR waits on the custom event
 			// for this SPA soft route
-			if (initiator === "spa" && routeChangeWaitFilter) {
+			if ((initiator === "spa" || routeChangeWaitFilterHardNavs) && routeChangeWaitFilter) {
 				debugLog("Running route change wait filter");
 				try {
 					if (routeChangeWaitFilter.apply(null, arguments)) {
@@ -499,6 +514,7 @@
 		 * @memberof BOOMR.plugins.SPA
 		 */
 		wait_complete: function() {
+			debugLog("Route change wait filter completed");
 			if (latestResource) {
 				latestResource.wait = false;
 
@@ -539,10 +555,10 @@
 						debugLog("SPA Navigation being marked complete; nodes waiting for: " + waiting);
 
 						// note that the navigation was forced complete
-						BOOMR.addVar("spa.forced", "1");
+						BOOMR.addVar("spa.forced", "1", true);
 
 						// add the count of nodes we were waiting for
-						BOOMR.addVar("spa.waiting", waiting);
+						BOOMR.addVar("spa.waiting", mh.nodesWaitingFor(), true);
 
 						// finalize this navigation
 						mh.completeEvent(i);
@@ -569,6 +585,27 @@
 				}
 			}
 			return false;
+		},
+
+		/**
+		 * Check to see if any of the SPAs are enabled.
+		 * Takes a config object so that it can be called from other plugins' init without
+		 * worrying about plugin order
+		 *
+		 * @param {object} config
+		 *
+		 * @returns {boolean} true if one of the SPA frameworks is enabled
+		 */
+		isSinglePageApp: function(config) {
+			var singlePageApp = false, frameworks = this.supported_frameworks();
+			for (i = 0; i < frameworks.length; i++) {
+				var spa = frameworks[i];
+				if (config[spa] && config[spa].enabled) {
+					singlePageApp = true;
+					break;
+				}
+			}
+			return singlePageApp;
 		}
 
 	};

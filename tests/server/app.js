@@ -8,6 +8,8 @@ var fs = require("fs");
 var readline = require("readline");
 var express = require("express");
 var compress = require("compression");
+var http = require("http");
+var https = require("https");
 
 //
 // Load env.json
@@ -15,7 +17,7 @@ var compress = require("compression");
 var envFile = path.resolve(path.join(__dirname, "env.json"));
 
 if (!fs.existsSync(envFile)) {
-	throw new Error("Please create " + envFile + ". There's a env.json.sample in the same dir.");
+	throw new Error("[APP] Please create " + envFile + ". There's a env.json.sample in the same dir.");
 }
 
 // load JSON
@@ -31,6 +33,20 @@ if (wwwRoot.indexOf("/") !== 0) {
 
 if (!fs.existsSync(wwwRoot)) {
 	wwwRoot = path.join(__dirname, "..");
+}
+
+var credentials = {};
+try {
+	var privatekey  = fs.readFileSync(path.join(__dirname, env.privatekey), "utf8");
+	var certificate = fs.readFileSync(path.join(__dirname, env.certificate), "utf8");
+	credentials = {
+		key: privatekey,
+		cert: certificate
+	};
+	console.log("[APP] Found credentials, key: " + env.privatekey + " cert: " + env.certificate);
+}
+catch (e) {
+	console.log("[APP] Credentials not found ", e);
 }
 
 var app = express();
@@ -51,6 +67,12 @@ function respond301(req, res) {
 
 	res.set("Access-Control-Allow-Origin", "*");
 	res.redirect(301, file);
+}
+
+function respond302(req, res) {
+	var q = require("url").parse(req.url, true).query;
+	var to = q.to || "/blackhole";
+	res.redirect(to);
 }
 
 function respond500(req, res) {
@@ -86,6 +108,9 @@ app.post("/delay", require("./route-delay"));
 // /redirect - 301 redirects
 app.get("/redirect", respond301);
 app.post("/redirect", respond301);
+
+// /redirect - 302
+app.get("/302", respond302);
 
 // /500 - Internal Server Error
 app.get("/500", respond500);
@@ -125,7 +150,7 @@ app.get("/*", function(req, res, next) {
 	});
 	input.on("open", function() {
 		var headers = {};
-		var lineReader = readline.createInterface({input: input});
+		var lineReader = readline.createInterface({ input: input });
 		lineReader.on("line", function(line) {
 			var colon = ":";
 			var colonIndex = line.indexOf(colon);
@@ -144,6 +169,18 @@ app.get("/*", function(req, res, next) {
 
 // all static content follows afterwards
 /*eslint dot-notation:0*/
+
+// do not cache certain static resources
+app.use("/assets", express.static(path.join(wwwRoot, "/assets"), {
+	etag: false,
+	lastModified: false,
+	index: false,
+	cacheControl: false,
+	setHeaders: function(res, _path) {
+		res.setHeader("Cache-Control", "no-cache, no-store");
+	}
+}));
+
 app.use(express.static(wwwRoot));
 
 // this needs to be before `app.listen(...)`
@@ -151,6 +188,18 @@ require("express-middleware-server-timing")(app);
 
 // listen
 var port = process.env.PORT || env.port;
-app.listen(port, function() {
-	console.log("Server starting on port " + port + " for " + wwwRoot);
-});
+var scheme = (process.argv.length >= 2 && process.argv[2]) || "http";
+
+if (scheme === "https" && credentials.key && credentials.cert) {
+	var httpsServer = https.createServer(credentials, app);
+
+	httpsServer.listen(port, function() {
+		console.log("[APP] HTTPS Server starting on port " + port + " for " + wwwRoot);
+	});
+}
+else {
+	var httpServer = http.createServer(app);
+	httpServer.listen(port, function() {
+		console.log("[APP] HTTP Server starting on port " + port + " for " + wwwRoot);
+	});
+}

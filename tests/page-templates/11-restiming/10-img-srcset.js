@@ -44,7 +44,7 @@ describe("e2e/11-restiming/10-img-srcset", function() {
 			ResourceTimingDecompression.HOSTNAMES_REVERSED = false;
 			var resources = ResourceTimingDecompression.decompressResources(JSON.parse(b.restiming));
 			var img = findSrcSetImage(resources);
-			assert.isDefined(img, "Image is undefined");
+			assert.isDefined(img, "Image is defined");
 		}
 		else {
 			this.skip();
@@ -72,7 +72,7 @@ describe("e2e/11-restiming/10-img-srcset", function() {
 			ResourceTimingDecompression.HOSTNAMES_REVERSED = false;
 			var resources = ResourceTimingDecompression.decompressResources(JSON.parse(b.restiming));
 			var img = findSrcSetImage(resources);
-			assert.equal(img.naturalWidth, getExpectedImage()[1]);
+			assert.closeTo(img.naturalWidth, getExpectedImage()[2], 1);  // without getSrcsetDimensions, we'll have the clientWidth
 		}
 		else {
 			this.skip();

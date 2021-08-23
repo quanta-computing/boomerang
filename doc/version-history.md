@@ -1,6 +1,158 @@
 # Boomerang Release Notes
 
-## 1.650.0
+## 1.737.0 (Apr 16, 2021)
+
+### New Features
+
+* AutoXHR: Allow SPA to start from clicks
+* SPA: Option to apply Wait Filter for Hard Navs
+* AutoXHR: Ignore `opacity:0`, 0px-dimension DOM elements, custom filters
+* Build: Support for build flavors
+
+### Bug Fixes
+
+* Unblock Early beacon during missed SPA Hard Nav
+* Boomerang: Always ensure Session Length is at least 1
+
+### Documentation
+
+* Doc: Loader Snippet Known Issues and other JSDoc changes
+
+## 1.725.0 (November 3, 2020)
+### Breaking Changes
+
+* Boomerang will no longer send an "XHR Beacon" when an `XMLHttpRequest` **does not** result in any interesting DOM modifications (i.e. no  new images, stylesheets, IFRAMEs or other XHRs were added).  This change can be reverted to the previous behavior (of still sending an XHR Beacon) by setting the `AutoXHR.xhrRequireChanges=false` flag.
+
+### Bug Fixes
+
+* AutoXHR: Don't send XHR beacons if there were no DOM mutations
+* AutoXHR: Don't wait on lazy-loaded images
+* AutoXHR: For XHR beacons that happen before Page Load, ResourceTiming data is properly added to the XHR beacon when it is fired
+* Continuity: Only add Time To Visually Ready (TTVR) to the Page Load beacon
+* Errors: Avoid loop in Memory plugin for some pages
+* EventTiming: Observe entries from top-level frame (e.g. for First Input Delay)
+* ResourceTiming: Include the Boomerang and Config URL (for mPulse)
+
+## 1.720.0 (July 29, 2020)
+### Bug Fixes
+
+* Boomerang: Added support for SameSite and Secure cookie attributes
+
+## 1.715.0 (June 26, 2020)
+### Bug Fixes
+
+* History: Correctly forward arguments to `routeFilter`
+
+### Documentation
+
+* Docs: Release notes updated
+* Docs: Continuity Cumulative Layout Shift docs
+* Docs: Added additional Back-end Servers and integration guides
+
+## 1.711.0 (June 8, 2020)
+### Bug Fixes
+
+* EventTiming: Change `firstInput` type to `first-input` per spec change
+
+## 1.710.0 (May 6, 2020)
+### Breaking Changes
+
+* Errors: The `monitorEvents` and `monitorTimeout` options are now disabled by default.  As a result, some cross-origin JavaScript
+  Errors may not report the full message (and instead will only show `Script Error.`), and the stack will not be available.
+  Please see the Errors plugin documentation for details on the side-effects of re-enabling those options.
+* Continuity: First Input Delay calculations have changed slightly.  The plugin will now use the Event Timing plugin
+  (if available and the browser supports it) for First Input Delay calculation.  If not, `mousedown`, `touchstart` and
+  `pointerdown` events are now used for First Input Delay calculations, while Scroll, Visibility and Orientation changes
+  are not.  Only cancelable events are now tracked.  First Input Delay should be more accurate, though there may be less
+  overall measurements (due to not tracking Scroll for First Input).
+
+### New Features
+
+* Event Timing plugin (enabled by default)
+* ResourceTiming: Service Worker timing capture at resource level
+* PaintTiming: Expose Largest Contentful Paint via `BOOMR.plugins.PaintTiming.metrics.lcp()`
+
+### Bug Fixes
+
+* Continuity: Scroll Log: Trim decimals
+
+### Documentation
+
+* Docs: Include minified snippets in built documentation
+* Docs: Add Header Snippets section
+* Docs: Fixed reference from `c.t.lt` to `c.t.longtask`
+* Boomerang: Document additional beacon vars
+
+### Tests
+
+* Tests: Ensure /delay path roots requested files to wwwRoot
+
+## 1.700.0 (January 29, 2020)
+### New Features:
+
+* Issue 1027: PaintTiming: Largest Contentful Paint
+* Issue 1030: Consent Inline Plugin and Docs
+* Issue 1040: Continuity: Add the ability to track Cumulative Layout Shift
+
+### Bug Fixes:
+
+* OS Issue 251: Add support for background image detection for `c.tti.hi`
+* OS Issue 261: NPM: Allow running grunt build
+* Issue 990: SPA: Only subtract SPA timeout when the timeout fires
+* Issue 1026: Update Snippet to have its own reference to the parentNode
+
+## 1.687.0 (October 10, 2019)
+### New Features:
+
+* Issue 1019: Boomerang: Replace MD5 with FNV for better performance
+
+### Bug Fixes:
+
+* OS Issue 273: `rt.si` not working as expected
+* OS Issue 275: UserTiming: Update `usertiming-compression` package to latest version
+* Issue 1020: RT: Error wrapping when we have `NS_ERROR_FAILURE` for Firefox 31
+* Issue 1021: AutoXHR: Handle removing `src` attribute from monitored resource
+
+## 1.681.0 (September 11, 2019)
+### Bug Fixes:
+
+* Issue 823: History SPA v2
+* Issue 1001: Continuity: Don't track interaction times in Safari if loaded in iframe
+* Issue 998: Docs: Document `rt.si`, `rt.ss`, `rt.sl`, `rt.tt`, `rt.obo`
+* Issue 997: ResTiming: Disable `srcset` physical dimension collection by default
+* Issue 1003: Continuity: Turn `monitorStats` off by default
+* Issue 987: Memory: Add support for `navigator.connection.saveData`
+* OS Issue 197: Navigation Timing: Plugin sends twice per page
+* Issue 1005: Continuity: Don't disable collection when API beacons are sent
+
+## 1.672.0 (August 22, 2019)
+### Bug Fixes:
+
+* Issue 999: RT: Cleanup beacon parameter cleanup
+
+## 1.669.0 (June 28, 2019)
+### Bug Fixes:
+
+* Issue 992: Errors: Ensure `message.indexOf` is a function
+* Issue 993: Early Beacon: Fix for SPA events
+
+## 1.667.0 (June 12, 2019)
+### New Features:
+
+* Issue 637: Early Beacons
+
+### Bug Fixes:
+
+* Issue 976: AutoXHR: XHR abort status fix for FireFox
+* Issue 980: Memory: Remove reference to BatteryManager API as this API is obsolete
+* Issue 812: ResourceTiming: More initiatorTypes
+* Issue 983: NavigationTiming: Don't use `chrome.loadTimes()` when there are no paints
+* Issue 982: Boomerang: Fix empty-beacon check
+* Issue 939: Optimize cookie access
+* Issue 991: Continuity: ceil duration times
+* Issue 990: Boomerang: Don't set cookie if domain is null, fallback to current
+
+## 1.650.0 (May 14, 2019)
 ### New Features:
 
 * Issue 782: Boomerang Loader Snippet v12
@@ -10,6 +162,7 @@
 
 * Issue 969: AutoXHR: Make `routeChangeWaitFilter` `wait_complete` calls wait for other pending nodes
 * Issue 972: IFrameDelay: Listen for `postMessage` calls on the correct window
+* Issue 973: LOGN: Use HTTP for XDomainRequest for IE8-10 if on HTTP site
 
 ### Docs:
 
@@ -20,7 +173,7 @@
 * Issue 975: IFrameDelay: Force tests to load Boomerang in an IFRAME when using the snippet
 * Issue 974: Grunt: Allow specifying multiple webdriver-version
 
-## 1.643.0
+## 1.643.0 (April 9, 2019)
 ### Performance Improvements:
 
 * Issue 933: Performance: Boomerang Performance Tests
@@ -39,14 +192,14 @@
 * Issue 952: Boomerang: Ensure only a single beacon is being sent at once
 * Issue 959: IFrameDelay: Gracefully handle different load orders
 
-## 1.630.0
+## 1.630.0 (January 15, 2019)
 ### Bug Fixes:
 
 * Issue 928: SPA: Ignore route changes if a `routeChangeWaitFilter` has not yet completed
 * Issue 929: History: Ignore `replaceState()` if a SPA nav is in progress and no URL change
 * Issue 930: SPA: Only apply `routeFilter` and `routeChangeWaitFilter` on SPA Soft Navigations
 
-## 1.629.0
+## 1.629.0 (December 3, 2018)
 ### Bug Fixes:
 
 * Issue 906: Cleanup leaked global vars
@@ -66,19 +219,19 @@
 * OS Issue 231: Add missing bracket after "Observer effect" link
 * OS Issue 236: Continuity: Update documentation of beacon parameters
 
-## 1.626.0
+## 1.626.0 (November 12, 2018)
 ### Bug Fixes:
 
 * Issue 905: Errors / AutoXHR: Un-register wrapped functions at unload
 * Issue 903: SPA: Make markNavigationComplete only apply to SPA events
 
-## 1.624.0
+## 1.624.0 (November 2, 2019)
 ### Bug Fixes:
 
 * Issue 892: Errors: Timing issue causing page load beacon to get tagged with the error type initiator marker
 * Issue 899: AutoXHR: Try to use native MutationObserver when running on a page with Zone.js
 
-## 1.621.0
+## 1.621.0 (October 24, 2018)
 ### New Features:
 
 * Session tracking via cookies
@@ -93,7 +246,7 @@
 * OS Issue 206: Fallback to use XHR if data store requires auth
 * OS Issue 211: Fix `getBeaconURL()` error using AutoXHR plugin
 
-## 1.615.0
+## 1.615.0 (September 25, 2018)
 ### Bug Fixes:
 
 * Issue 879: Protect against undefined `nodeName`
@@ -101,14 +254,14 @@
 * Issue 769: NavTiming: Don't look at `chrome.loadTimes()` if `nextHopProtocol` is empty
 * Issue 883: Cookie Compression
 
-## 1.612.0
+## 1.612.0 (September 18, 2019)
 ### Bug Fixes:
 
 * Issue 869: PaintTiming: Don't add FP/FCP if document is hidden or for SPA Soft/XHRs
 * Issue 873: Continuity: Don't fail if Screen Orientation API is not supported
 * Issue 876: Boomerang: Don't use polyfilled `sendBeacon()`
 
-## 1.609.0
+## 1.609.0 (August 29, 2018)
 ### Bug Fixes:
 
 * Issue 847: Don't use the `navigator.sendBeacon` API when `beacon_type` is set to `GET`
@@ -118,14 +271,14 @@
 * Issue 866: AutoXHR: don't mistakenly clear `monitorFetch` flag
 * Issue 863: AutoXHR: `alwaysSendXhr` accepts a function or list of strings/regexs
 
-## 1.602.0
+## 1.602.0 (August 17, 2018)
 ### Bug Fixes:
 
 * Issue 858: Fix `localStorage` expiry time
 * Issue 854: Run page ready only after config arrives
 * Issue 861: If the cookie is set to null, `rt.si`, `rt.sl`, `rt.ss`, should not be written
 
-## 1.598.0
+## 1.598.0 (July 27, 2018)
 ### New Features
 
 * Issue 851: EXPERIMENTAL: AutoXHR: Delay checking RT if fetch response body is not used
@@ -142,7 +295,7 @@
 
 * Issue 820: ResourceTiming: JSDoc fixes
 
-## 1.593.0
+## 1.593.0 (July 23, 2018)
 ### New Features:
 
 * Issue 824: EXPERIMENTAL: AutoXHR: Add Fetch API instrumentation
@@ -152,7 +305,7 @@
 * Issue 843: AutoXHR: Handle XHRs that are aborted after `readyState` 4
 * Issue 844: SPA: Fixes URL for SPA navigations after XHR beacons
 
-## 1.590.0
+## 1.590.0 (July 16, 2018)
 ### New Features:
 
 * Issue 813: Add cookie length and `localStorage` length as beacon parameters
@@ -177,7 +330,7 @@
 * Issue 830: Continuity: Docs update for missing parameters
 * Issue 836: Docs for Boomerang Tests
 
-## 1.579.0
+## 1.579.0 (May 7, 2018)
 ### New Features:
 
 * Issue 792: Use currentSrc for images (`PICTURE` support)
@@ -188,7 +341,7 @@
 * Issue 809: Errors: unbound `removeEventListener`
 * Issue 750: History: react to `popstate` events and allow aborted beacons
 
-## 1.571.0
+## 1.571.0 (April 10, 2018)
 ### New Features:
 
 * Issue 528: Continuity plugin
@@ -206,7 +359,7 @@
 * Issue 776: Correctly detect our url on IE using non-standard loader
 * Issue 799: Move `alwaysSendXhr` into the `pluginConfig` section to make it clearer that this is an AutoXHR config
 
-## 1.566.0 (restricted use)
+## 1.566.0 (March 21, 2019 - restricted use)
 ### New Features:
 
 * Issue 759: Update to new server timing header syntax
@@ -227,12 +380,12 @@
 * Issue 767: Revive the SauceLabs code
 * Issue 751: Gruntfile: Split apart build steps
 
-## 1.552.0
+## 1.552.0 (February 9, 2018)
 ### New Features:
 
 * Issue 748: PaintTiming plugin; NavTiming: Deprecate `chrome.loadTimes()`
 
-## 1.543.0
+## 1.543.0 (January 25, 2018)
 ### New Features:
 
 * Issue 728: Override the load end-time with `BOOMR_page_ready` or a param to `BOOMR.page_ready()`
@@ -251,13 +404,13 @@
 * Issue 722: Work around minification that breaks in IE8 and quirks mode
 * Issue 718: Errors: Wrap `addEventListener` at the end of the protocol chain
 
-## 1.532.0
+## 1.532.0 (December 18, 2017)
 ### Bug Fixes:
 
 * Issue 714: Fix Custom Timers for SPA navigations
 * Issue 699: NavigationTiming: Don't include timestamps for events that haven't happened
 
-## 1.527.0
+## 1.527.0 (December 12, 2017)
 ### New Features:
 
 * Issue 695: `BOOMR.sendAll()`
@@ -267,14 +420,14 @@
 * Issue 701: CrossDomain: Validate cross-domain URL
 * Issue 710: Workaround for `document.write` changing readyState after `onload`
 
-## 1.522.0
+## 1.522.0 (November 10, 2017)
 ### Bug Fixes:
 
 * Issue 693: Add `BOOMR.utils.arrayFind` (fixes ResourceTiming in IE11)
 * Issue 696: Better string checking for Boolean Custom Metrics
 * Issue 700: Capture `BOOMR.page_ready()` time after `onload`; `BOOMR.addVar()` for single beacons
 
-## 1.517.0
+## 1.517.0 (October 20, 2017)
 ### New Features:
 
 * Issue 635: ServerTiming support
@@ -289,40 +442,40 @@
 * Issue 685: ResourceTiming: Add `iframe` and `subdocument` to `initiatorType`
 * Issue 683: CrossDomain: Abort when cross-domain URL isn't specified
 
-## 1.511.0
+## 1.511.0 (September 7, 2017)
 ### Bug Fixes:
 
 * Issue 621: CrossDomain: Reliability fixes
 * Issue 665: AutoXHR: Wait once up to 1,000ms after an uninteresting mutation
 * Issue 666: `SPA.markNavigationComplete()` support
 
-## 1.506.0
+## 1.506.0 (August 30, 2017)
 ### Bug Fixes:
 
 * Issue 663: AutoXHR: If we don't instrument XHR `open()` due to exclude filter then don't instrument `send()`
 * Issue 664: AutoXHR: Do not extend the event timeout with each uninteresting mutation
 
-## 1.500.0
+## 1.500.0 (August 15, 2017)
 ### Bug Fixes:
 
 * Issue 602: SPA: Aborted load beacons
 * Issue 647: RT: Fix `t_page` and `t_resp` missing from the beacon
 * Issue 648: RT: Always use `loadEventEnd` as the end load time
 
-## 1.495.0 (restricted use)
+## 1.495.0 (July 24, 2017 - restricted use)
 ### Bug Fixes:
 
 * Issue 598: NavigationTiming: Add a few NavigationTiming2 fields if available
 * Issue 599: ResourceGroup: Support for SPA navigations
 * Issue 614: ResourceGroups: Match all CSS selector elements instead of just first one
 
-## 1.489.0 (restricted use)
+## 1.489.0 (July 7, 2017 - restricted use)
 ### Bug Fixes:
 
 * Issue 624: `BOOMR.sendMetric/Timer`: Include `rt.end`
 * Issue 633: `BOOMR.sendMetric/Timer`: Append session start time to `rt.si`
 
-## 1.486.0
+## 1.486.0 (June 16, 2017)
 ### Bug Fixes:
 
 * Issue 610: BOOMR.log: Add timestamp
@@ -332,7 +485,7 @@
 * Issue 609: Angular: Don't trigger Route Change on `$locationChangeStart` if other events fire
 * Issue 618: `BOOMR.sendTimer/sendMetric`: Set the location so dimensions work properly
 
-## 1.483.0
+## 1.483.0 (May 15, 2017)
 ### Bug Fixes:
 
 * Issue 594: AutoXHR: Don't wait for XHRs that `.open()` but don't `.send()`
@@ -340,12 +493,12 @@
 * Issue 588: Add support for delaying `page_load` beacon with instrumented iframes
 * Issue OSS 139: ResTiming: Resource type filter
 
-## 1.479.0
+## 1.479.0 (May 12, 2017)
 ### Bug Fixes:
 
 * Issue 591: `sendBeacon`: `x-www-form-urlencoded`
 
-## 1.477.0 (restricted use)
+## 1.477.0 (May 11, 2017 - restricted use)
 ### Bug Fixes:
 
 * Issue 586: Don't report IE error for freed script in event and timeout handlers
@@ -362,7 +515,7 @@
 * Issue 562: Minor fixes to sync with OS repo
 * Issue OSS 138: Make the errors plugin work without the Compression plugin
 
-## 1.463.1493220061
+## 1.463.1493220061 (April 26, 2017)
 ### Bug Fixes:
 
 * Issue 570: History: Option to disable hard navigation in favor of `BOOMR.page_ready()`
@@ -371,18 +524,18 @@
 * Issue 564: AutoXHR: Fixes XHR after click missing beacon
 * Issue 567: Update copyrights
 
-## 1.452.1492175627
+## 1.452.1492175627 (April 14, 2017)
 ### Bug Fixes:
 
 * Issue 556: Deduplicate calls to `addEventListener()` with the same arguments
 
-## 1.451.1491334204
+## 1.451.1491334204 (April 4, 2017)
 ### Bug Fixes:
 
 * Issue 555: Ensure we don't clobber `cross_domain_url` if it has a query param already
 * Issue 557: AutoXHR: Only capture `reponseText` or `responseXML` if the type is set
 
-## 1.449.1490889765
+## 1.449.1490889765 (March 30, 2017)
 ### Bug Fixes:
 
 * Issue 553: Prevent Errors plugin from accessing a function of a potentially undefined error message
@@ -390,12 +543,12 @@
 * Issue 554: Replace `isArray` with `hasOwnProperty` check for backward compatibility
 * Issue 551: Remove calls for timepoint calculations
 
-## 1.446.1490635326
+## 1.446.1490635326 (March 27, 2017)
 ### Bug Fixes:
 
 * Issue 549: Fix typo in NavigationTiming (push of `undefined`)
 
-## 1.445.1489625641
+## 1.445.1489625641 (March 15, 2017)
 ### Bug Fixes:
 
 * Issue 525: Grunt: Re-run specific tasks
@@ -412,13 +565,13 @@
 * Issue 526: History bugs and XHR beacon handling changes
 * Misc: Jump to newer versions of eslint so that jenkins matches reality
 
-## 1.435.1487783301
+## 1.435.1487783301 (February 22, 2017)
 ### Bug Fixes:
 
 * Issue 520: Test fix
 * Issue 521: Bind `forEach` contexts this to calling `mutationHandler` instance context
 
-## 1.432.1486768074
+## 1.432.1486768074 (February 10, 2017)
 ### Bug Fixes:
 
 * Issue 509: Adds Page ID and refactored random ID generation
@@ -433,19 +586,19 @@
 * Issue 455: `t_page < 0` on some SPA beacons
 * Issue 518: Protect against browser bugs for `t_page` and `t_resp`
 
-## 1.429.1485448661
+## 1.429.1485448661 (January 26, 2017)
 ### Bug Fixes:
 
 * Issue 456: Errors: Filter boomerang functions from stack in minified version
 * Issue 508: Errors: `Errors.wrap`: Run `BOOMR_check_doc_domain` first
 
-## 1.426.1484362995
+## 1.426.1484362995 (January 13, 2017)
 ### Bug Fixes:
 
 * Issue 496: ESlint: Enable `space-in-parens`
 * Issue 499: boomerang: Fix XHR Authorization check
 
-## 1.423.1483643196
+## 1.423.1483643196 (January 5, 2017)
 ### Bug Fixes:
 
 * Issue 479: Prevent XHR Beacons before SPA Hard if `alwaysSendXHR` not enabled
@@ -460,7 +613,7 @@
 * Misc: Update README to account for changed build procedure
 * OS 112: `POST` & Auth Token Support
 
-## 1.413.1477614597
+## 1.413.1477614597 (October 27, 2016)
 ### Bug Fixes:
 
 * Issue 470: SPA: Recalculate SPA Hard timings before capturing ResourceTiming
@@ -468,7 +621,7 @@
 * Issue 476: Add `rt.nstart` to to beacon
 * Issue 477: Avoid IE10 / IE11 bug with `MutationObserver` and `XHR.responseXML`
 
-## 1.407.1476482714
+## 1.407.1476482714 (October 14, 2016)
 ### New Features:
 
 * Support for Resource Groups
@@ -477,7 +630,7 @@
 
 * Issue 465: SPA Hard navigation timing calculation changes
 
-## 1.405.1475087321
+## 1.405.1475087321 (September 28, 2016)
 ### Bug Fixes:
 
 * Issue 451: Session length incrementing for XHR subresource beacons before `onload`
@@ -485,14 +638,14 @@
 * Issue 453: `scrollX` and `scrollY` undefined in IE
 * Issue 477: Ensure window is available when sending a Beacon
 
-## 1.402.1473440808
+## 1.402.1473440808 (September 9, 2016)
 ### Bug Fixes:
 
 * Issue 434: Boomerang: Wrap `dispatchEvent()` / `fireEvent()` in `try/catch`
 * Issue 440: AutoXHR: Improve tracking with multiple outstanding XHRs
 * Issue 443: TPAnalytics: Skip calling `ga.getAll()` if it's not a function
 
-## 1.400.1470878703
+## 1.400.1470878703 (August 10, 2016)
 ### Bug Fixes:
 
 * Issue 412: BOOMR.now was always using `Date.now`
@@ -502,7 +655,7 @@
 * Issue 430: Fix xhr negative `t_page` in prerender
 * Issue 431: Ensure our `MutationObserver` is created in the page's context, not our IFRAME
 
-## 1.399.1469784094
+## 1.399.1469784094 (July 29, 2016)
 ### Bug Fixes:
 
 * Issue 416: Fixes capturing of ResourceTiming2 sizes
@@ -513,12 +666,12 @@
 * Issue 422: AutoXHR: Click events should always use the URL of the fetched resource
 * Issue 423: Errors: `monitorConsole` bug fixed
 
-## 1.394.1467954210
+## 1.394.1467954210 (July 7, 2016)
 ### Bug Fixes:
 
 * Issue 400: Wraps `removeEventListener()` to work with the wrapped functions
 
-## 1.390.1467244673
+## 1.390.1467244673 (June 29, 2016)
 ### New Features:
 
 * Cross-domain session tracking support
@@ -533,7 +686,7 @@
 * Issue 386: ResourceTiming fixes bugs for browsers that have NT but no RT support
 * Issue 389: Fix missing data on pre-rendered pages when another beacon is sent before
 
-## 1.381.1463423250
+## 1.381.1463423250 (May 16, 2019)
 ### New Features:
 
 * TPAnalytics: Plugin captures IDs from other third-party analytics scripts
@@ -545,12 +698,12 @@
 * Issue 376, 377, 378: Fixes warnings when window doesn't exist due to the page unloading
 * Issue 378, 380: Fixes warnings when `JSON` doesn't exist
 
-## 1.376.1462309808
+## 1.376.1462309808 (May 3, 2016)
 ### Bug Fixes:
 
 * Issue 366: Fixes a bug where a beacon might not be sent if an IMG is modified several times in a Single Page App nav
 
-## 1.371.1461863625
+## 1.371.1461863625 (April 28, 2016)
 ### New Features:
 
 * Errors plugin: JavaScript Error Reporting
@@ -559,14 +712,14 @@
 * Large beacons (for example, those containing ResourceTiming data) are now sent using XHR instead of a FORM POST
 * `scr.sxy` parameter added to the beacon (scroll X and Y in pixels at the time of the beacon)
 
-## 1.345.1458593666
+## 1.345.1458593666 (March 21, 2016)
 ### Bugs Fixes:
 
 * Issue 328: Fix race condition causing No Page Groups
 * Issue 329: Fix for History plugin when using `auto` in custom SPA frameworks
 * Issue 331: Protect against user agents that throw errors on `window.performance` access
 
-## 1.334.1456175784
+## 1.334.1456175784 (February 23, 2016)
 ### New Features:
 
 * XHR instrumentation uses ResourceTiming if available for more accurate performance metrics
@@ -598,14 +751,14 @@
 * Issue 313: Fixes conflict with other third-party XHR instrumentation
 * Issue 315: SPA navigation beacons being sent when `autorun=false` for prerender
 
-## 1.246.1441122062
+## 1.246.1441122062 (September 1, 2015)
 ### Bug Fixes:
 
 * Issue 174: Allow for quotes in cookies
 * Issue 189: Only fire beacons during prerender to visible transition if beyond page load
 * Issue 191: Check for Backbone existence on the correct IFRAME
 
-## 1.235.1439916634
+## 1.235.1439916634 (August 18, 2015)
 ### Bug Fixes:
 
 * Bug 95730: Support static function members on JavaScript classes and strings for dimensions, timers and metrics
@@ -614,7 +767,7 @@
 * Issue 181: Fix to stop sending two beacons when SPA is disabled in app configuration but hook code is still on the page
 * Issue 179: Enable QuerySelectors for Custom Timers with ResourceTiming
 
-## 0.9.1437148526
+## 0.9.1437148526 (July 17, 2015)
 ### New Features:
 
 * Optional parameter to await completion in bandwidth plugin before sending beacon
