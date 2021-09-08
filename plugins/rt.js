@@ -451,7 +451,7 @@
 			    // or the average page session length is longer than the session exp
 			    (avgSessionLength > sessionExp)
 			) {
-				if (Math.random() > BOOMR.cr) {
+				if (!isNaN(BOOMR.cr) && Math.random() > BOOMR.cr) {
 					// "SamplingRate test failed, we won't send beacons for this new session"
 					BOOMR.session.rate_limited = true
 					return
