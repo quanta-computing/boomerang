@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "server": "live-server src --verbose",
+    "start": "live-server src --verbose",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.1.2",
+    "live-server": "^1.2.1",
     "services": "0.0.3"
   }
 }
