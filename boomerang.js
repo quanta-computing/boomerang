@@ -1331,6 +1331,7 @@ BOOMR_check_doc_domain();
 			 * @memberof BOOMR.utils
 			 */
 			getRawCookie: function(name) {
+        return window.sessionStorage.getItem(name)
 				if (!name) {
 					return null;
 				}
@@ -1381,8 +1382,10 @@ BOOMR_check_doc_domain();
 				/* END_DEBUG */
 
 				value = this.objectToString(subcookies, "&");
+        window.sessionStorage.setItem(name, value);
+        return true;
 
-				if (value === BOOMR.cookies[name]) {
+        if (value === BOOMR.cookies[name]) {
 					// no change
 					return true;
 				}
