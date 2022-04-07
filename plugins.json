@@ -11,6 +11,7 @@
         "plugins/md5.js",
         "plugins/compression.js",
         "plugins/errors-count.js",
+        "plugins/qta-pagesize.js",
         "plugins/continuity.js"
     ]
 }
