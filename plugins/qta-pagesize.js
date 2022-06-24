@@ -12,27 +12,26 @@
 
     // Called before beacon, we add our parameters to beacon
     done: function() {
-      console.log("Adding qps.cnt & qps.sz to beacon");
       var size = 0;
       var count = 0;
+      var tao_filtered_count = 0;
       for (const entry of this.records) {
         if (!entry.transferSize || entry.transferSize <= 0) {
-          console.log("no transferSize for " + entry.name + ": " + entry.transferSize);
+          tao_filtered_count += 1;
         }
-        console.log("entry " + entry.name + ": " + entry.transferSize);
         count += 1;
         size += entry.transferSize;
       }
-      console.log("qps.cnt=" + count + ", qps.sz=" + size);
+      BOOMR.addVar("qps.fcnt", tao_filtered_count);
       BOOMR.addVar("qps.cnt", count);
       BOOMR.addVar("qps.sz", size);
+      BOOMR.addVar("qps.domcnt", document.getElementsByTagName('*').length); // TODO! how to deal with SPAs ?
 
       this.records = []; // We flush our records queue
     },
 
 
     performanceObserverCallback: function(records) {
-      console.log("GOT RECORDS");
       for (const entry of records.getEntries()) {
         this.records.push(entry);
       }
@@ -41,7 +40,9 @@
     // Called after sending beacon
     onBeacon: function() {
       BOOMR.removeVar("qps.cnt");
+      BOOMR.removeVar("qps.fcnt");
       BOOMR.removeVar("qps.sz");
+      BOOMR.removeVar("qps.domsz");
     },
   };
 
