@@ -1,6 +1,6 @@
 // This code is run after all plugins have initialized
 BOOMR.init({
-  beacon_url: window.QTABMR_BEACON_URL,
+  beacon_url: window.QTABMR_BEACON_URL || window.QTABMR.QTABMR_BEACON_URL,
   beacon_type: 'GET',
   beacon_disable_sendbeacon: true,
   instrument_xhr: true,
