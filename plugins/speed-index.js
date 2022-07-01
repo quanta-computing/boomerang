@@ -10,7 +10,12 @@
   // A private object to encapsulate all your implementation details
   // This is optional, but the way we recommend you do it.
   var impl = {
-    done: function(firstPaint) {
+    done: function() {
+      var firstPaint = BOOMR.plugins.PaintTiming.getTimingFor("first-paint") ||
+        BOOMR.plugins.PaintTiming.getTimingFor("first-contentful-paint");
+      if (!firstPaint) {
+        return;
+      }
       var win = BOOMR.window;
       var doc = win.document;
       var GetElementViewportRect = function(el) {
@@ -139,7 +144,6 @@
       var SpeedIndex;
       var pageBackgroundWeight = 0.1;
       try {
-        var navStart = win.performance.timing.navigationStart;
         GetRects();
         GetRectTimings();
         CalculateVisualProgress();
@@ -149,7 +153,7 @@
     },
 
     // Cleanup after ourselves
-    onBeacon: function() {
+    clear: function() {
       BOOMR.removeVar("nm_si");
     },
 
@@ -161,9 +165,8 @@
   BOOMR.plugins.SpeedIndex = {
     init: function(config) {
 			if (!impl.initialized) {
-        // Start calculate only when the first-paint has been found and fire the fp_ready event (from navtiming.js)
-        BOOMR.subscribe("fp_ready", impl.done, null, impl);
-        BOOMR.subscribe("beacon", impl.onBeacon, null, impl);
+        BOOMR.subscribe("before_beacon", impl.done, null, impl);
+        BOOMR.subscribe("beacon", impl.clear, null, impl);
 
         impl.initialized = true;
 			}

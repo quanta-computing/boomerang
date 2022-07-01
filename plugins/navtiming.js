@@ -316,9 +316,6 @@
 						data.nt_first_paint = calcNavTimingTimestamp(offset, paintTiming);
 					}
 				}
-				if (data.nt_first_paint && BOOMR.plugins.SpeedIndex) {
-					BOOMR.fireEvent("fp_ready", data.nt_first_paint - data.nt_nav_st);
-				}
 				//
 				// Chrome provides window.chrome.loadTimes(), but this is deprecated
 				// in Chrome 64+ and will be removed at some point.  The data it
