@@ -4189,6 +4189,14 @@ BOOMR_check_doc_domain();
 
 			BOOMR.debug("Ready to send beacon: " + BOOMR.utils.objectToString(data));
 
+      // Check for unwanted beacon kinds
+      var initiator = data['http.initiator'];
+      if (initiator && initiator !== ''
+      && !BOOMR.utils.inArray(initiator, ['interaction', 'spa', 'spa_hard'])) {
+        BOOMR.info("Beacon type '" + initiator + "' isnt allowed, skipping beacon send");
+        return true;
+      }
+
 			// Use the override URL if given
 			impl.beacon_url = impl.beacon_url_override || impl.beacon_url;
 
