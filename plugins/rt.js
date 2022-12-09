@@ -280,6 +280,20 @@
 			// domain
 			subcookies.dm = BOOMR.session.domain;
 
+			QTABMR.cr = '<SITE_SAMPLING_RATE>';
+			QTABMR.addVar('md_cr', QTABMR.cr);
+
+			// this is the first pageview of the session
+			// for the first time the cookie with the session.id is not defined yet
+			// its a good moment to check the sampling rate
+			if (typeof subcookies.si === 'undefined') {
+
+				if (!isNaN(QTABMR.cr) && Math.random() > QTABMR.cr) {
+					// "SamplingRate test failed, we won't send beacons for this new session"
+					QTABMR.session.rate_limited = true
+				}
+			}
+
 			// session ID
 			subcookies.si = BOOMR.session.ID;
 
