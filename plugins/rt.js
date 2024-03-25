@@ -440,6 +440,9 @@
       "rt");
       /* END_DEBUG */
 
+      BOOMR.cr = '<SITE_SAMPLING_RATE>';
+      BOOMR.addVar('md_cr', QTABMR.cr);
+
       // determine the average page session length, which is the session length over # of pages
       var avgSessionLength = 0;
 
