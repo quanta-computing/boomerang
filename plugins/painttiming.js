@@ -204,25 +204,27 @@
         BOOMR.addVar("pt.lcp.src", impl.lcp.src, true);
       }
 
-      if (impl.lcp.el) {
-        BOOMR.addVar("pt.lcp.el", impl.lcp.el, true);
-      }
 
-      if (impl.lcp.id) {
-        BOOMR.addVar("pt.lcp.id", impl.lcp.id, true);
-      }
+      // Quanta beacons: We want them as light as possible, removing unused values
+      // if (impl.lcp.el) {
+      //   BOOMR.addVar("pt.lcp.el", impl.lcp.el, true);
+      // }
 
-      if (impl.lcp.e) {
-        BOOMR.addVar("pt.lcp.e", impl.lcp.e, true);
-      }
+      // if (impl.lcp.id) {
+      //   BOOMR.addVar("pt.lcp.id", impl.lcp.id, true);
+      // }
 
-      if (impl.lcp.srcset) {
-        BOOMR.addVar("pt.lcp.srcset", impl.lcp.srcset, true);
-      }
+      // if (impl.lcp.e) {
+      //   BOOMR.addVar("pt.lcp.e", impl.lcp.e, true);
+      // }
 
-      if (impl.lcp.sizes) {
-        BOOMR.addVar("pt.lcp.sizes", impl.lcp.sizes, true);
-      }
+      // if (impl.lcp.srcset) {
+      //   BOOMR.addVar("pt.lcp.srcset", impl.lcp.srcset, true);
+      // }
+
+      // if (impl.lcp.sizes) {
+      //   BOOMR.addVar("pt.lcp.sizes", impl.lcp.sizes, true);
+      // }
 
       if (impl.lcp.s) {
         BOOMR.addVar("pt.lcp.s", impl.lcp.s, true);

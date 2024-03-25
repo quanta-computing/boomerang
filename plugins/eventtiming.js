@@ -241,7 +241,8 @@
           compressed.push(entry);
         }
 
-        BOOMR.addVar("et.e", BOOMR.utils.serializeForUrl(compressed), true);
+        // Quanta: We do not want/need such level of info, commenting out for smaller beacons
+        // BOOMR.addVar("et.e", BOOMR.utils.serializeForUrl(compressed), true);
       }
 
       // clear until the next beacon
@@ -261,7 +262,8 @@
 
       if (iinp) {
         BOOMR.addVar("et.inp.inc", iinp.duration, true);
-        BOOMR.addVar("et.inp.inc.e", iinp.target, true);
+        // Quanta: We do not want this level of details, removing for smaller beacons
+        // BOOMR.addVar("et.inp.inc.e", iinp.target, true);
         BOOMR.addVar("et.inp.inc.t", iinp.startTime, true);
       }
 
@@ -288,7 +290,8 @@
 
       if (inp) {
         BOOMR.addVar("et.inp", inp.duration, true);
-        BOOMR.addVar("et.inp.e", inp.target, true);
+        // Quanta: We do not want so much details
+        // BOOMR.addVar("et.inp.e", inp.target, true);
         BOOMR.addVar("et.inp.t", inp.startTime, true);
       }
     },

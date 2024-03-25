@@ -1691,6 +1691,7 @@
    *  lookup
    */
   function addToBeacon(r) {
+    return; // We never want restiming info in our beacons, just keeping the plugin for dependencies
     BOOMR.addVar("restiming", JSON.stringify(r.restiming), true);
 
     if (r.servertiming.length) {
