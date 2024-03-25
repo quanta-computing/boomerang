@@ -14,13 +14,14 @@
 		"outputSourcePath": false,
 		"systemName": "Boomerang",
 		"footer": "",
-		"copyright": "© 2010-2019 the contributors to the Open Source Boomerang project and Akamai Technologies, Inc.",
+		"copyright": "© 2010-2023 the contributors to the Open Source Boomerang project and Akamai Technologies, Inc.",
 		"theme": "akamai",
 		"linenums": true,
 		"collapseSymbols": false,
 		"inverseNav": false,
 		"highlightTutorialCode": true,
-		"protocol": "html://"
+		"protocol": "html://",
+		"disablePackagePath": true
 	},
 	"markdown": {
 		"parser": "gfm"

@@ -32,10 +32,13 @@ The snippet does the following:
       `<script>` tag that loads boomerang.js.
     * It sets the IFRAME's `<body onload="document._l()">` to run the function
       above, so the `<script>` tag is loaded after the IFRAME's `onload` event has fired.
-5. For IE 6 and IE 7, which don't support the non-blocking IFRAME loader method (due to problems they have with `about:blank`
-    URLs in secure contexts), a dynamic `<script>` node is added to the page.
-    * Note this means that in IE 6 and 7, Boomerang could be a SPOF (Single Point of Failure) if the script is delayed,
-      potentially delaying the Page Load.
+5. For IE 6/7/8, a dynamic `<script>` node is added to the page.
+    * IE 6 and 7 don't support the non-blocking IFRAME loader method, due to problems they have with `about:blank`
+      URLs in secure contexts.  IE 6 and 7 account for 0.00052% of internet traffic (according to mPulse) in 2021.
+    * IE 8 support would require a `document.write()` call with the IFRAME loader method, which we want to avoid as
+      static analysis tools may point it out even if it's only executed in older browsers. IE 8 accounts for 0.00109% of internet traffic (according to mPulse) in 2021.
+    * Note this means that in IE 6, 7 and 8, Boomerang could be a SPOF (Single Point of Failure) if the script is delayed,
+      potentially delaying the Page Load
 
 Note: We split the `<body` tag insertion into `<bo` and `dy` to avoid server-side output filters that may replace `<body` tags with their own code.
 
@@ -87,16 +90,20 @@ Minified:
 ## Known Issues
 
 * Websites using Google Tag Manager (GTM) to inject the Loader Snippet may not see beacons from Firefox <= 74
-    * These versions of Firefox do not support Preload, so fallback to using the IFRAME loader
-    * boomerang.js is not fetched due to a Firefox bug with setting the `iframe.src = "about:blank"`, which is done for Content Security Policies (CSP) compatibility
-    * Websites that are not using Content Security Policies can change:
-        ```
-        // An empty frame
-        iframe.src = "about:blank";
-        ```
-        to
-        ```
-        // An empty frame
-        iframe.src = "javascript:void(0)";
-        ```
-    * Websites that are using Content Security Policies should use a `<script async>` tag to load boomerang.js instead of the Loader Snippet
+  * These versions of Firefox do not support Preload, so fallback to using the IFRAME loader
+  * boomerang.js is not fetched due to a Firefox bug with setting the `iframe.src = "about:blank"`, which is done for Content Security Policies (CSP) compatibility
+  * Websites that are not using Content Security Policies can change:
+  
+  ```javascript
+  // An empty frame
+  iframe.src = "about:blank";
+  ```
+  
+  to
+
+  ```javascript
+  // An empty frame
+  iframe.src = "javascript:void(0)";
+  ```
+  
+  * Websites that are using Content Security Policies should use a `<script async>` tag to load boomerang.js instead of the Loader Snippet

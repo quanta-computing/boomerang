@@ -19,7 +19,7 @@ In addition, you should map the following two domains to `127.0.0.1`:
 
 e.g.
 
-```
+```text
 # /etc/hosts or C:\windows\system32\drivers\etc\hosts
 127.0.0.1 boomerang-test.local boomerang-test2.local
 ```
@@ -52,7 +52,7 @@ grunt test:debug
 Once the webserver has started, you should be able to visit the following URL
 in your browser:
 
-http://boomerang-test.local:4002/unit/
+[boomerang-test.local:4002/unit/](http://boomerang-test.local:4002/unit/)
 
 All Unit Test files are manually included via `tests/unit/index.html`.
 
@@ -70,7 +70,6 @@ all `tests/unit/*.js` files via Grunt and [Karma](https://karma-runner.github.io
 * `grunt test:unit:IE`
 * `grunt test:unit:Opera`
 * `grunt test:unit:Safari`
-* `grunt test:unit:PhantomJS`
 
 The Unit Tests utilize [Chai Assert](http://www.chaijs.com/api/assert/) for validations.
 
@@ -108,7 +107,6 @@ all E2E tests files via Grunt and [Protractor](https://www.protractortest.org/):
 * `grunt test:e2e`
 * `grunt test:e2e:browser`
 * `grunt test:e2e:debug` - will only run tests in `tests/e2e/e2e-debug.json`
-* `grunt test:e2e:PhantomJS`
 * `grunt test:e2e:Chrome`
 * `grunt test:e2e:ChromeHeadless`
 * `grunt test:e2e:Firefox`
