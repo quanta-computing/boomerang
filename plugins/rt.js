@@ -274,6 +274,18 @@
         }
       }
 
+      // maybeResetSession is not always called, let's do the sampling check here too!
+      BOOMR.cr = '<SITE_SAMPLING_RATE>';
+      BOOMR.addVar('md_cr', QTABMR.cr);
+
+      // this is the first pageview of the session
+      // for the first time the cookie with the session.id is not defined yet
+      // its a good moment to check the sampling rate
+      if (typeof subcookies.si === 'undefined' && !isNaN(QTABMR.cr) && Math.random() > QTABMR.cr) {
+        // "SamplingRate test failed, we won't send beacons for this new session"
+        BOOMR.session.rate_limited = true
+      }
+
       // compresion level
       subcookies.z = COOKIE_COMPRESSED_TIMESTAMPS;
 
@@ -466,7 +478,7 @@
       ) {
         if (!isNaN(BOOMR.cr) && Math.random() > BOOMR.cr) {
           // "SamplingRate test failed, we won't send beacons for this new session"
-          BOOMR.session.rate_limited = true
+          BOOMR.session.rate_limited = true;
           return;
         }
 
