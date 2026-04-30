@@ -16,9 +16,9 @@ jobs:
       matrix:
         node-version: [12.x]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci --no-audit --prefer-offline
@@ -31,9 +31,9 @@ jobs:
       matrix:
         node-version: [12.x]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci --no-audit --prefer-offline
@@ -50,9 +50,9 @@ jobs:
       CI_NODE_INDEX: 0
       CI_NODE_TOTAL: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci --no-audit --prefer-offline
@@ -69,9 +69,9 @@ jobs:
       CI_NODE_INDEX: 1
       CI_NODE_TOTAL: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci --no-audit --prefer-offline
@@ -88,9 +88,9 @@ jobs:
       CI_NODE_INDEX: 2
       CI_NODE_TOTAL: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci --no-audit --prefer-offline
@@ -107,9 +107,9 @@ jobs:
       CI_NODE_INDEX: 3
       CI_NODE_TOTAL: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci --no-audit --prefer-offline
@@ -126,9 +126,9 @@ jobs:
       CI_NODE_INDEX: 4
       CI_NODE_TOTAL: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci --no-audit --prefer-offline

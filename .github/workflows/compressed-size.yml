@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: preactjs/compressed-size-action@v1
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+      - uses: preactjs/compressed-size-action@6cd4d74bf28d472327aeebe8e71dbc903a85da7f # v1
         with:
           repo-token: '${{ secrets.GITHUB_TOKEN }}'
           pattern: '{build/boomerang-1.0.0.min.js,build/plugins/*.js}'

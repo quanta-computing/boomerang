@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
       - run: npm ci --no-audit --prefer-offline
-      - uses: a-b-r-o-w-n/eslint-action@v1
+      - uses: a-b-r-o-w-n/eslint-action@22078d8d79fe1dd25ec07b1f8a9319f0a0b011b7 # v1
         with:
           repo-token: '${{ secrets.GITHUB_TOKEN }}'
           files: '**/*.js'
